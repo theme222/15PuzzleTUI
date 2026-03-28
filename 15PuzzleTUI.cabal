@@ -68,10 +68,12 @@ executable 15PuzzleTUI
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.3.0
+    build-depends:    base ^>=4.18.3.0,
+                      containers,
+                      array
 
     -- Directories containing source files.
-    hs-source-dirs:   app
+    hs-source-dirs:   app, src
 
     -- Base language which the package is written in.
     default-language: Haskell2010
