@@ -1,35 +1,29 @@
 module Main where
-import qualified Data.Foldable as Foldable 
-import qualified Data.Array as Array 
-import Data.Array ((!), Array)
+import qualified Grid 
+import Grid (Grid)
+import qualified Ipair
+import Ipair ((~+), (~-), Ipair)
+import System.IO (stdout, hSetBuffering, BufferMode(NoBuffering))
 
-rows = 4
-cols = 4
-values = [1..((rows * cols) - 1)] ++ [0] -- 0 is "empty"
-arr = Array.listArray ((0, 0), (3, 3)) values
+testGrid :: Grid
+testGrid = Grid.grid (4, 4)
 
-
-printHelper :: Array.Array (Int, Int) Int -> (Int, Int) -> IO ()
-printHelper inArr index  
-    | snd index == rows - 1 = do
-        putStr " "
-        putStr (show (inArr!index))
-        putStr " |\n"
-    | snd index == 0 = do 
-        putStr "| "
-        putStr (show (inArr!index))
-    | otherwise = do
-        putStr " "
-        putStr (show (inArr!index))
+getIntent :: String -> Grid -> Ipair
+getIntent "w" g = Grid.getPos 0 g ~+ (1,  0)
+getIntent "s" g = Grid.getPos 0 g ~+ (-1, 0)
+getIntent "a" g = Grid.getPos 0 g ~+ (0,  1)
+getIntent "d" g = Grid.getPos 0 g ~+ (0, -1)
+getIntent  _  g = Grid.getPos 0 g -- Effectively do nothing
 
 
-printArray2D :: Array (Int, Int) Int -> IO ()
-printArray2D inArr = do
-    mapM_ (printHelper inArr) (Array.indices inArr)
-    
+loop :: Grid -> IO () 
+loop currentGrid = do
+    Grid.print2D currentGrid
+    putStr "Input next action (w, a, s, d): "
+    action <- getLine
+    loop (Grid.move (getIntent action currentGrid) currentGrid)
 
 main :: IO ()
 main = do
-    putStrLn "Yea baby"
-    print (Array.elems arr)
-    printArray2D arr
+    hSetBuffering stdout NoBuffering
+    loop testGrid
