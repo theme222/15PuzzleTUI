@@ -26,5 +26,5 @@ loop currentGrid = do
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    shuffled <- Grid.shuffle testGrid -- Google says 80 - 100+ works so I'm doubling it just incase
+    shuffled <- Grid.shuffle testGrid 
     loop shuffled
