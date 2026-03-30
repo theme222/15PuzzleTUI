@@ -5,21 +5,33 @@ import Data.Array ((!), Array, (//))
 import qualified Data.Ix as Ix
 import Ipair (Ipair, (~-), (~+))
 import Control.Monad (when)
-import System.Random (randomR, getStdRandom, getStdGen, randomRIO)
+import System.Random (getStdGen, randomRIO)
 import qualified System.Random.Shuffle as Random.Shuffle (shuffle')
 
 type Array2D = Array Ipair Int
-data Grid = Grid Ipair Int Array2D -- Size, Move Count, 2d Array
+data Grid = Grid {   
+    gridSize :: Ipair,
+    gridMoveCount :: Int,
+    gridArr :: Array2D
+} deriving Show
 
 size2D :: Array2D -> Ipair
 size2D inArr = snd (Array.bounds inArr) ~+ (1, 1)
 
-grid :: Ipair -> Grid
-grid size =
+_genOrdered2DArray :: Ipair -> Array2D
+_genOrdered2DArray size = 
     let (rows, cols) = size
         values = [1..((rows * cols) - 1)] ++ [0] -- 0 is "empty"
-        arr = Array.listArray ((0, 0), (rows-1, cols-1)) values
-    in Grid size 0 arr
+    in Array.listArray ((0, 0), (rows-1, cols-1)) values
+
+grid :: Ipair -> Grid
+grid size =
+    let arr = _genOrdered2DArray size
+    in Grid {
+        gridSize = size,
+        gridMoveCount = 0,
+        gridArr = arr
+    }
     
 _countInversions :: [Int] -> Int
 _countInversions [] = 0
@@ -33,13 +45,12 @@ _makeEven _ = error "Could not make permutation even"
 
 _genCorrectPermutation :: Grid -> IO [Int]
 _genCorrectPermutation g = do 
-    let (Grid size _ _) = g
-        (rows, cols) = size
+    let (rows, cols) = gridSize g
     Random.Shuffle.shuffle' [1..(rows*cols - 1)] (rows * cols - 1) <$> getStdGen -- This linter really be suggesting sum bull shit
     
 shuffle :: Grid -> IO Grid
 shuffle g = do
-    let (Grid size _ _) = g
+    let size = gridSize g 
         (rows, cols) = size
     -- Randomize the permuation of all tiles except for blank (its fixed at the end)
     perm <- _genCorrectPermutation g
@@ -68,7 +79,8 @@ _mappedPrinter size inArr index = do
 
 print2D :: Grid -> IO ()
 print2D g = do
-    let (Grid size _ inArr) = g
+    let size = gridSize g 
+        inArr = gridArr g
     mapM_ (_mappedPrinter size inArr) (Array.indices inArr)
 
 -- getPos returns the position of the specified value.
@@ -76,7 +88,7 @@ getPos :: Int -> Grid -> Ipair
 getPos val (Grid _ _ inArr) = fst $ head $ filter (\t -> snd t == val) (Array.assocs inArr)
 
 validPos :: Grid -> Ipair -> Bool
-validPos (Grid _ _ inArr) = Ix.inRange (Array.bounds inArr) 
+validPos g = Ix.inRange $ Array.bounds $ gridArr g
 
 validPosAround :: Ipair -> Grid -> [Ipair]
 validPosAround pos g =  
@@ -108,3 +120,10 @@ move movePos g =
                 = (movePos, 0): [((i, blankX), inArr!(i+1, blankX)) | i <- [blankY..(moveY-1)]]
             | otherwise = []
     in Grid gSize (gTotal + 1) (inArr // updates)
+
+-- move a block offsetted from the blank tile by Ipair
+offset :: Ipair -> Grid -> Grid
+offset movePos g = move (getPos 0 g ~+ movePos) g
+
+isSolved :: Grid -> Bool
+isSolved g = gridArr g == _genOrdered2DArray (gridSize g)

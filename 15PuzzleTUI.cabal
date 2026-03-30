@@ -52,7 +52,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -threaded
 
 executable 15PuzzleTUI
     -- Import common warning flags.
@@ -62,7 +62,7 @@ executable 15PuzzleTUI
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Grid, Ipair
+    other-modules:    Grid, Ipair, Game, UI
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -72,7 +72,9 @@ executable 15PuzzleTUI
                       containers,
                       array,
                       random,
-                      random-shuffle
+                      random-shuffle,
+                      brick,
+                      vty
 
     -- Directories containing source files.
     hs-source-dirs:   app, src
