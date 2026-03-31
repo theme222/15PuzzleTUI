@@ -37,7 +37,7 @@ _countInversions :: [Int] -> Int
 _countInversions [] = 0
 _countInversions list = 
     let (x:xs) = list 
-    in length (filter (< x) xs)
+    in length (filter (< x) xs) + _countInversions xs
     
 _makeEven :: [Int] -> [Int]
 _makeEven (x:y:xs) = y:x:xs
@@ -46,7 +46,9 @@ _makeEven _ = error "Could not make permutation even"
 _genCorrectPermutation :: Grid -> IO [Int]
 _genCorrectPermutation g = do 
     let (rows, cols) = gridSize g
-    Random.Shuffle.shuffle' [1..(rows*cols - 1)] (rows * cols - 1) <$> getStdGen -- This linter really be suggesting sum bull shit
+    perm <- Random.Shuffle.shuffle' [1..(rows*cols - 1)] (rows * cols - 1) <$> getStdGen -- This linter really be suggesting sum bull shit
+    if even (_countInversions perm) then pure perm
+    else pure (_makeEven perm)
     
 shuffle :: Grid -> IO Grid
 shuffle g = do
@@ -99,6 +101,7 @@ validPosAround pos g =
         pos ~+ (-1, 0)
     ]
 
+-- Move a tile with the pos of Ipair
 move :: Ipair -> Grid -> Grid
 move movePos g =
     let blankPos = getPos 0 g
