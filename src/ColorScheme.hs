@@ -2,25 +2,15 @@ module ColorScheme where
 
 import Graphics.Vty (Attr)
 import qualified Graphics.Vty as V
-import Brick.Util (fg, bg, on)
-import Ipair
 import Grid (Grid)
 import qualified Grid
+import Brick
 
 type ColorScheme = Grid -> ColorGetter 
 type ColorGetter = Int -> Attr
 type ColorMap = [V.Color]
 
--- _red = V.red
--- _green = V.green
--- _yellow = V.yellow
--- _blue = V.blue
--- _magenta = V.magenta
--- _cyan = V.cyan
--- _white = V.white
-
-
--- Thx chatgpt
+-- Thx gemini
 hslToRgb :: Float -> Float -> Float -> V.Color
 hslToRgb h s l = V.rgbColor (round $ r * 255) (round $ g * 255) (round $ b * 255)
   where
@@ -56,7 +46,7 @@ _getFringeMapIndex g val =
         else col * 2 + 1
 
 fringe :: ColorScheme
-fringe _ 0 = V.withStyle (bg V.white) V.bold
+fringe _ 0 = V.defAttr 
 fringe g value = 
     let (rows, cols) = Grid.gridSize g
         colorMap = genRainbowColorMap (rows + cols - 2)

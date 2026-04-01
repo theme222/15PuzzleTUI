@@ -6,7 +6,7 @@ import Brick (EventM, modify, get)
 import Control.Monad.IO.Class (liftIO)
 import qualified UI
 
-data ActionType = Left | Right | Up | Down | Point | Back| Reset deriving (Eq, Show)
+data ActionType = Left | Right | Up | Down | Point | Back | Reset deriving (Eq, Show)
 
 data Action = Action {
     actionType :: ActionType,
@@ -25,14 +25,14 @@ dispatch a = do
     else pure ()
 
 _playSceneActionHandler :: Action -> EventM UI.WidgetName GameState ()
-_playSceneActionHandler action = do
+_playSceneActionHandler a = do
     state <- get -- Grab the state
-    case actionType action of
+    case actionType a of
         Action.Left  -> modify (\s -> s { gameGrid = Grid.offset (0, 1) (gameGrid s) })
         Action.Right -> modify (\s -> s { gameGrid = Grid.offset (0, -1) (gameGrid s) })
         Action.Up    -> modify (\s -> s { gameGrid = Grid.offset (1, 0) (gameGrid s) })
         Action.Down  -> modify (\s -> s { gameGrid = Grid.offset (-1, 0) (gameGrid s) })
-        Action.Point -> modify (\s -> s { gameGrid = Grid.move (actionPosition action) (gameGrid s) })
+        Action.Point -> modify (\s -> s { gameGrid = Grid.move (actionPosition a) (gameGrid s) })
         
         -- The Magic Happens Here! (Thx chatgpt)
         Action.Reset -> do
@@ -44,4 +44,4 @@ _playSceneActionHandler action = do
         _ -> return ()
 
 _settingsSceneActionHandler :: Action -> EventM UI.WidgetName GameState ()
-_settingsSceneActionHandler action = return ()
+_settingsSceneActionHandler _ = return ()

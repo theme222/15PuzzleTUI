@@ -6,38 +6,39 @@ import Brick.Widgets.Center (center)
 import Brick.Widgets.Border (border)
 
 import Grid (Grid)
-import qualified UI
-import UI (gridUI)
+import qualified UI 
+import qualified Scene.PlayScene as PlayScene
 import Action 
 import State
 import Ipair (nilPair)
+import qualified State as Scene
+import qualified Scene.SettingsScene as SettingsScene
 
 -- UI renderer
 drawUI :: GameState -> [Widget UI.WidgetName]
 drawUI state = 
-    let settings = gameSettings state
-        colorGetter = settingsColorScheme settings $ gameGrid state
-    in [ 
-        center $ gridUI (gameGrid state) colorGetter
-    ]
+    let currentDrawer = case gameScene state of 
+            Scene.PlayScene -> PlayScene.draw
+            Scene.SettingsScene -> SettingsScene.draw
+    in [ currentDrawer state ]
 
 -- Event handler
 handleEvent :: BrickEvent UI.WidgetName e -> EventM UI.WidgetName GameState ()
 -- handleEvent (VtyEvent (V.EvKey V.KUp []))         = modify (\s -> s { moves = moves s + 1 })
-handleEvent (VtyEvent (V.EvKey (V.KChar 'q') []))     = halt
-handleEvent (VtyEvent (V.EvKey (V.KChar 'w') []))     = Action.dispatch $ action Action.Up
-handleEvent (VtyEvent (V.EvKey (V.KChar 'a') []))     = Action.dispatch $ action Action.Left
-handleEvent (VtyEvent (V.EvKey (V.KChar 's') []))     = Action.dispatch $ action Action.Down
-handleEvent (VtyEvent (V.EvKey (V.KChar 'd') []))     = Action.dispatch $ action Action.Right
-handleEvent (VtyEvent (V.EvKey V.KUp []))             = Action.dispatch $ action Action.Up
-handleEvent (VtyEvent (V.EvKey V.KLeft []))           = Action.dispatch $ action Action.Left
-handleEvent (VtyEvent (V.EvKey V.KDown []))           = Action.dispatch $ action Action.Down
-handleEvent (VtyEvent (V.EvKey V.KRight []))          = Action.dispatch $ action Action.Right
-handleEvent (VtyEvent (V.EvKey (V.KChar 'r') []))     = Action.dispatch $ action Action.Reset
-handleEvent (VtyEvent (V.EvKey (V.KChar ' ') []))     = Action.dispatch $ action Action.Reset
-handleEvent (VtyEvent (V.EvKey (V.KChar 'b') []))     = Action.dispatch $ action Action.Back
-handleEvent (MouseDown (UI.Tilename pos) V.BLeft _ _) = Action.dispatch $ Action Action.Point pos
-handleEvent _                                         = return () -- Ignore all other keys
+handleEvent (VtyEvent (V.EvKey (V.KChar c) [])) | c == 'q' = halt
+                                                | c == 'w' = Action.dispatch $ action Action.Up
+                                                | c == 'a' = Action.dispatch $ action Action.Left
+                                                | c == 's' = Action.dispatch $ action Action.Down
+                                                | c == 'd' = Action.dispatch $ action Action.Right
+                                                | c == 'r' = Action.dispatch $ action Action.Reset
+                                                | c == ' ' = Action.dispatch $ action Action.Reset
+                                                | c == 'b' = Action.dispatch $ action Action.Back
+handleEvent (VtyEvent (V.EvKey V.KUp []))                  = Action.dispatch $ action Action.Up
+handleEvent (VtyEvent (V.EvKey V.KLeft []))                = Action.dispatch $ action Action.Left
+handleEvent (VtyEvent (V.EvKey V.KDown []))                = Action.dispatch $ action Action.Down
+handleEvent (VtyEvent (V.EvKey V.KRight []))               = Action.dispatch $ action Action.Right
+handleEvent (MouseDown (UI.Tilename pos) V.BLeft _ _)      = Action.dispatch $ Action Action.Point pos
+handleEvent _                                              = return () -- Ignore all other keys
 
 
 appConfig :: App GameState e UI.WidgetName

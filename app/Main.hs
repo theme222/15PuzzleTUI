@@ -8,7 +8,6 @@ import State
 import Grid (grid, shuffle)
 import ColorScheme (fringe)
 
-
 main :: IO ()   
 main = do
     let initialSettings = Settings {
@@ -21,7 +20,7 @@ main = do
     
     let initialState = State.GameState { 
             gameScene = PlayScene,
-            gameStartTime = pure 0,
+            gameStartTime = Nothing,
             gameGrid = randomGrid,
             gameSettings = initialSettings
         }
