@@ -52,7 +52,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall -threaded
+    ghc-options: -Wall -threaded -O3
 
 executable 15PuzzleTUI
     -- Import common warning flags.
@@ -75,7 +75,8 @@ executable 15PuzzleTUI
                       random-shuffle,
                       brick,
                       vty,
-                      vty-crossplatform
+                      vty-crossplatform,
+                      time
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

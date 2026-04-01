@@ -9,7 +9,9 @@ import Data.Array ((!))
 import UI (WN, WidgetName (..))
 import ColorScheme (ColorGetter)
 import Brick.Widgets.Center
-import State (GameState(gameGrid, gameSettings), settingsColorScheme)
+import State (GameState(gameGrid, gameSettings), settingsColorScheme, gameTimerMs)
+import Text.Printf (printf)
+import Brick.Widgets.Border (border)
 
 _getPaddingSize :: Char -> Int -> Int
 _getPaddingSize 'l' v = 5 - (v `div` 2)
@@ -65,8 +67,17 @@ _genGridRowUI g cg pos  =
 gridUI :: Grid -> ColorGetter -> Widget WN 
 gridUI g cg = _genGridRowUI g cg (0, 0)
 
+timerUI :: Int -> Widget WN
+timerUI totalMs = 
+    let seconds = (totalMs `div` 1000) `mod` 60
+        minutes = totalMs `div` 60000
+        ms      = totalMs `mod` 1000
+        
+        timeStr = printf "%02d:%02d.%03d" minutes seconds ms
+    in border $ str ("Current Time: " ++ timeStr ++ " ")
+
 draw :: GameState -> Widget WN
 draw state = 
     let settings = gameSettings state
         colorGetter = settingsColorScheme settings $ gameGrid state
-    in center $ gridUI (gameGrid state) colorGetter
+    in center $ gridUI (gameGrid state) colorGetter <=> timerUI (gameTimerMs state)

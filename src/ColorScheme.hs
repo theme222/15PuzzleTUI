@@ -31,7 +31,7 @@ hslToRgb h s l = V.rgbColor (round $ r * 255) (round $ g * 255) (round $ b * 255
     b = b' + m
 
     -- Helper for float modulo
-    fmod a b = a - fromIntegral (floor (a / b)) * b
+    fmod _x _y = _x - fromIntegral (floor (_x / _y)) * _y
 
 -- Total colors can be found by doing (rows-1 + cols-1)
 genRainbowColorMap :: Int -> ColorMap

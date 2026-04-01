@@ -7,36 +7,43 @@ import Game
 import State
 import Grid (grid, shuffle)
 import ColorScheme (fringe)
+import Brick.BChan (newBChan, writeBChan)
+import Control.Concurrent (forkIO, threadDelay)
+import Control.Monad (forever)
+import Data.Time.Clock (getCurrentTime)
 
 main :: IO ()   
 main = do
+    -- Init settings
     let initialSettings = Settings {
             settingsTileType = Fill,
             settingsColorScheme = fringe,
             settingsGridSize = (4, 4)
         }
         
+    -- Init initial state
     randomGrid <- shuffle $ grid $ settingsGridSize initialSettings
-    
     let initialState = State.GameState { 
             gameScene = PlayScene,
-            gameStartTime = Nothing,
             gameGrid = randomGrid,
-            gameSettings = initialSettings
+            gameSettings = initialSettings,
+            gameIsRunning = False,
+            gameTimerMs = 0,
+            gameLastTickTime = Nothing
         }
+        
+    -- Create a channel for timer (idk what this means)
+    timerUpdateChannel <- newBChan 10
     
-    -- 2. Create the Vty builder configuration
+    _ <- forkIO $ forever $ do
+        threadDelay 1000
+        now <- getCurrentTime
+        writeBChan timerUpdateChannel (Tick now) 
+    
     let buildVty = VCP.mkVty V.defaultConfig
-    
-    -- 3. Build the Vty instance manually
     initialVty <- buildVty
-    
-    -- 4. THE OVERRIDE: Forcibly tell Vty to send the Mouse activation code
-    -- This overrides whatever vty *thinks* Ghostty is capable of.
     V.setMode (V.outputIface initialVty) V.Mouse True
     
-    -- 5. Boot the app using customMain instead of defaultMain
-    -- The 'Nothing' means we are not using a custom background event channel.
-    finalState <- customMain initialVty buildVty Nothing appConfig initialState
+    _ <- customMain initialVty buildVty (Just timerUpdateChannel) appConfig initialState
     
     putStrLn "Game gracefully closed."

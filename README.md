@@ -2,5 +2,13 @@
 
 > I'm either gonna learn Haskell or die trying
 
-Yes I know [this](https://github.com/benjaminselfridge/fifteen) exists it was on the brick README.md
-I'm gonna try to make it better tho. hehe
+Shout out to [this](https://github.com/benjaminselfridge/fifteen) because it was made first lol.
+Be nice this language is hard ok?
+
+## Run 
+
+```sh
+cabal build && cabal run
+```
+
+
