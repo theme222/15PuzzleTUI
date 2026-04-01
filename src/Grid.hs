@@ -89,6 +89,12 @@ print2D g = do
 getPos :: Int -> Grid -> Ipair
 getPos val (Grid _ _ inArr) = fst $ head $ filter (\t -> snd t == val) (Array.assocs inArr)
 
+getOriginalPos :: Int -> Grid -> Ipair
+getOriginalPos val g = 
+    let (rows, cols) = gridSize g
+    in  if val == 0 then (rows - 1, cols - 1)
+        else ((val - 1) `div` cols, (val - 1) `mod` cols)
+    
 validPos :: Grid -> Ipair -> Bool
 validPos g = Ix.inRange $ Array.bounds $ gridArr g
 

@@ -9,8 +9,10 @@ import qualified Grid
 import Grid (Grid)
 import Ipair
 import Data.Array ((!))
+import ColorScheme (ColorScheme, ColorGetter)
 
 data WidgetName = Tilename Ipair | Background deriving (Eq, Ord, Show)
+type WN = WidgetName
 
 _getPaddingSize :: Char -> Int -> Int
 _getPaddingSize 'l' v = 5 - (v `div` 2)
@@ -24,33 +26,44 @@ _standardizeText :: String -> String
 _standardizeText "0" = " " -- Also make 0 blank
 _standardizeText text = if odd $ length text then text else intersperse ' ' text
 
-numberTileUI :: Grid -> Ipair -> Widget WidgetName
-numberTileUI g pos =
+_applyInlineStyle :: ColorGetter -> Int -> Widget WN -> Widget WN
+_applyInlineStyle cg val = modifyDefAttr (\_ -> cg val) 
+
+_applyPadding :: Int -> Widget WN -> Widget WN
+_applyPadding len w = 
+    let  
+        leftPadding = padLeft $ Pad $ _getPaddingSize 'l' len
+        rightPadding = padRight $ Pad $ _getPaddingSize 'r' len
+    in
+        leftPadding $ rightPadding $ padTopBottom 2 w
+
+numberTileUI :: Grid -> ColorGetter -> Ipair -> Widget WN
+numberTileUI g cg pos =
     let inArr = Grid.gridArr g
         val = inArr ! pos
         display = _standardizeText $ show val
-        leftPadding = padLeft $ Pad $ _getPaddingSize 'l' $ length display
-        rightPadding = padRight $ Pad $ _getPaddingSize 'r' $ length display
-    in clickable (Tilename pos) (border $ leftPadding $ rightPadding $ padTopBottom 2 $ str display)
+    in clickable 
+        (Tilename pos) 
+            (_applyInlineStyle cg val $ _applyPadding (length display) $ str display)
     
 -- recursively build the columns
-_genGridColUI :: Grid -> Ipair -> Widget UI.WidgetName  
-_genGridColUI g pos = 
+_genGridColUI :: Grid -> ColorGetter -> Ipair -> Widget WidgetName  
+_genGridColUI g cg pos = 
     let size = Grid.gridSize g
         inArr = Grid.gridArr g
         (_, colCount) = size
         (_, currentCol) = pos
-    in if currentCol == colCount - 1 then numberTileUI g pos
-       else numberTileUI g pos <+> _genGridColUI g (pos ~+ (0, 1))
+    in if currentCol == colCount - 1 then numberTileUI g cg pos
+       else numberTileUI g cg pos <+> _genGridColUI g cg (pos ~+ (0, 1))
     
 -- recursively build the rows 
-_genGridRowUI :: Grid -> Ipair -> Widget WidgetName  
-_genGridRowUI g pos  = 
+_genGridRowUI :: Grid -> ColorGetter -> Ipair -> Widget WN
+_genGridRowUI g cg pos  = 
     let size = Grid.gridSize g
         (rowCount, _) = size
         (currentRow, _) = pos
-    in if currentRow == rowCount - 1 then _genGridColUI g pos
-    else _genGridColUI g pos <=> _genGridRowUI g (pos ~+ (1, 0))
+    in if currentRow == rowCount - 1 then _genGridColUI g cg pos
+    else _genGridColUI g cg pos <=> _genGridRowUI g cg (pos ~+ (1, 0))
     
-gridUI :: Grid -> Widget WidgetName  
-gridUI g = _genGridRowUI g (0, 0)
+gridUI :: Grid -> ColorGetter -> Widget WN 
+gridUI g cg = _genGridRowUI g cg (0, 0)

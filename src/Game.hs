@@ -14,8 +14,11 @@ import Ipair (nilPair)
 
 -- UI renderer
 drawUI :: GameState -> [Widget UI.WidgetName]
-drawUI state = [ 
-        center $ gridUI $ gameGrid state 
+drawUI state = 
+    let settings = gameSettings state
+        colorGetter = settingsColorScheme settings $ gameGrid state
+    in [ 
+        center $ gridUI (gameGrid state) colorGetter
     ]
 
 -- Event handler

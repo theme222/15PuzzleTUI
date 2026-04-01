@@ -1,5 +1,4 @@
 module Main where
-import Brick
 import Brick (customMain)
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty.CrossPlatform as VCP
@@ -7,13 +6,25 @@ import qualified Graphics.Vty.CrossPlatform as VCP
 import Game 
 import State
 import Grid (grid, shuffle)
+import ColorScheme (fringe)
 
-testGrid = grid (4, 4)
 
 main :: IO ()   
 main = do
-    randomGrid <- shuffle testGrid
-    let initialState = State.GameState { gameScene = PlayScene, gameStartTime = pure 0, gameGrid = randomGrid}
+    let initialSettings = Settings {
+            settingsTileType = Fill,
+            settingsColorScheme = fringe,
+            settingsGridSize = (4, 4)
+        }
+        
+    randomGrid <- shuffle $ grid $ settingsGridSize initialSettings
+    
+    let initialState = State.GameState { 
+            gameScene = PlayScene,
+            gameStartTime = pure 0,
+            gameGrid = randomGrid,
+            gameSettings = initialSettings
+        }
     
     -- 2. Create the Vty builder configuration
     let buildVty = VCP.mkVty V.defaultConfig

@@ -2,8 +2,7 @@ module Action where
 import State
 import Ipair (Ipair, nilPair)
 import qualified Grid
-import Grid (Grid)
-import Brick (EventM, modify, get, put)
+import Brick (EventM, modify, get)
 import Control.Monad.IO.Class (liftIO)
 import qualified UI
 
