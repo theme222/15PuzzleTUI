@@ -1,17 +1,14 @@
 module Game where
 
-import Brick
-import qualified Graphics.Vty as V
-import Brick.Widgets.Center (center)
-import Brick.Widgets.Border (border)
-
-import Grid (Grid)
 import qualified UI 
 import qualified Scene.PlayScene as PlayScene
 import Action 
 import State
 import qualified State as Scene
 import qualified Scene.SettingsScene as SettingsScene
+
+import Brick
+import qualified Graphics.Vty as V
 import Control.Monad (when)
 import Data.Time.Clock (diffUTCTime)
 

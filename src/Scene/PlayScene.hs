@@ -1,19 +1,18 @@
 module Scene.PlayScene where
 
-import Brick
-import Data.List (intersperse)
 import qualified Grid
-import Grid (Grid)
 import Ipair
-import Data.Array ((!))
 import UI (WN, WidgetName (..))
 import ColorScheme (ColorGetter, applyCGAsFg, applyCGAsBg)
-import Brick.Widgets.Center
 import State (GameState(gameGrid, gameSettings), settingsColorScheme, gameTimerMs, TileType (..), settingsTileType)
+
+import Brick
+import Data.List (intersperse)
+import Data.Array ((!))
+import Brick.Widgets.Center
 import Text.Printf (printf)
 import Brick.Widgets.Border (border)
-import qualified Graphics.Vty as V
-import Brick.Widgets.Border.Style (ascii, unicodeBold, unicodeRounded)
+import Brick.Widgets.Border.Style (unicodeBold)
 
 _getPaddingSize :: Char -> Int -> Int
 _getPaddingSize 'l' v = 5 - (v `div` 2)
@@ -71,7 +70,7 @@ _genGridRowUI state pos  =
     else _genGridColUI state pos <=> _genGridRowUI state (pos ~+ (1, 0))
     
 gridUI :: GameState -> Widget WN 
-gridUI state = hCenter $ joinBorders $ _genGridRowUI state (0, 0)
+gridUI state = hCenter $ _genGridRowUI state (0, 0)
 
 gameStatUI :: GameState -> Widget WN
 gameStatUI state = 

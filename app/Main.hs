@@ -1,4 +1,11 @@
 module Main where
+
+import Game 
+import State
+import Grid (grid, shuffle)
+import ColorScheme (fringe)
+import qualified Config
+
 import Brick (customMain)
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty.CrossPlatform as VCP
@@ -7,17 +14,11 @@ import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (forever)
 import Data.Time.Clock (getCurrentTime)
 
-import Game 
-import State
-import Grid (grid, shuffle)
-import ColorScheme (fringe)
-import qualified Config
-
 main :: IO ()   
 main = do
     -- Init settings
     let initialSettings = Settings {
-            settingsTileType = Border,
+            settingsTileType = Fill,
             settingsColorScheme = fringe,
             settingsGridSize = (4, 4)
         }

@@ -1,10 +1,12 @@
 module Grid where
+
+import Ipair (Ipair, (~-), (~+))
+
+import Control.Monad (when)
 import qualified Data.Array as Array
 import Text.Printf (printf)
 import Data.Array ((!), Array, (//))
 import qualified Data.Ix as Ix
-import Ipair (Ipair, (~-), (~+))
-import Control.Monad (when)
 import System.Random (getStdGen, randomRIO)
 import qualified System.Random.Shuffle as Random.Shuffle (shuffle')
 

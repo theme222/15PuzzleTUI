@@ -1,11 +1,13 @@
 module Action where
+
 import State
 import Ipair (Ipair, nilPair)
 import qualified Grid
 import Grid (Grid)
-import Brick (EventM, modify, get)
-import Control.Monad.IO.Class (liftIO)
 import qualified UI
+
+import Control.Monad.IO.Class (liftIO)
+import Brick (EventM, modify, get)
 
 data ActionType = Left | Right | Up | Down | Point | Menu | Reset deriving (Eq, Show)
 
@@ -57,7 +59,7 @@ _checkBoardAndApplyMove state newGrid = -- new Grid here is what the grid would 
     let isRunning = gameIsRunning state
     in  
         if gameTimerMs state == 0 && not isRunning then -- First move
-            state { gameIsRunning = True }
+            state { gameIsRunning = True, gameGrid = newGrid }
         else if not isRunning then -- Already solved
             state
         else if Grid.isSolved newGrid then -- Just finished solving

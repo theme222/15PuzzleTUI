@@ -1,9 +1,9 @@
 module ColorScheme where
 
-import Graphics.Vty (Attr)
-import qualified Graphics.Vty as V
 import Grid (Grid)
 import qualified Grid
+
+import qualified Graphics.Vty as V
 import Brick
 
 type ColorScheme = Grid -> ColorGetter 
@@ -53,10 +53,10 @@ fringe g value =
 
     -- in V.withStyle (bg (colorMap !! _getFringeMapIndex g value)) V.bold
 
-applyCGAsFg :: ColorGetter -> Int -> Attr
+applyCGAsFg :: ColorGetter -> Int -> V.Attr
 applyCGAsFg _ 0 = V.defAttr 
 applyCGAsFg cg val = V.withStyle (fg $ cg val) V.bold
 
-applyCGAsBg :: ColorGetter -> Int -> Attr
+applyCGAsBg :: ColorGetter -> Int -> V.Attr
 applyCGAsBg _ 0 = V.defAttr 
 applyCGAsBg cg val = V.withStyle (bg $ cg val) V.bold

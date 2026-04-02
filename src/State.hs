@@ -2,9 +2,9 @@ module State where
 
 import Grid (Grid)
 import Ipair (Ipair)
-import Graphics.Vty (Attr)
 import ColorScheme (ColorScheme)
-import Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
+
+import Data.Time.Clock (UTCTime)
 
 data Scene = PlayScene | SettingsScene deriving (Show, Eq)
 data TileType = Fill | Border deriving (Show, Eq)
