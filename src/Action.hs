@@ -7,7 +7,7 @@ import Brick (EventM, modify, get)
 import Control.Monad.IO.Class (liftIO)
 import qualified UI
 
-data ActionType = Left | Right | Up | Down | Point | Back | Reset deriving (Eq, Show)
+data ActionType = Left | Right | Up | Down | Point | Menu | Reset deriving (Eq, Show)
 
 data Action = Action {
     actionType :: ActionType,
@@ -34,6 +34,7 @@ _playSceneActionHandler a = do
         Action.Up    -> modify (\s -> _checkBoardAndApplyMove s $ Grid.offset (1, 0) (gameGrid s))
         Action.Down  -> modify (\s -> _checkBoardAndApplyMove s $ Grid.offset (-1, 0) (gameGrid s))
         Action.Point -> modify (\s -> _checkBoardAndApplyMove s $ Grid.move (actionPosition a) (gameGrid s))
+        Action.Menu  -> modify (\s -> s { gameScene = SettingsScene })
         
         -- The Magic Happens Here! (Thx chatgpt)
         Action.Reset -> do
@@ -42,10 +43,14 @@ _playSceneActionHandler a = do
             -- 2. Modify the state with our pure, newly shuffled grid
             modify (\s -> s { gameGrid = newGrid, gameIsRunning = False, gameTimerMs = 0 })
             
-        _ -> return ()
+        _ -> pure ()
 
 _settingsSceneActionHandler :: Action -> EventM UI.WidgetName GameState ()
-_settingsSceneActionHandler _ = return ()
+_settingsSceneActionHandler a = do
+    state <- get
+    case actionType a of
+        Action.Menu  -> modify (\s -> s { gameScene = PlayScene })
+        _ -> pure ()
 
 _checkBoardAndApplyMove :: GameState -> Grid -> GameState
 _checkBoardAndApplyMove state newGrid = -- new Grid here is what the grid would be if it had done the move

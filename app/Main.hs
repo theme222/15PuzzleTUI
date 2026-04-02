@@ -2,21 +2,22 @@ module Main where
 import Brick (customMain)
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty.CrossPlatform as VCP
-
-import Game 
-import State
-import Grid (grid, shuffle)
-import ColorScheme (fringe)
 import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (forever)
 import Data.Time.Clock (getCurrentTime)
 
+import Game 
+import State
+import Grid (grid, shuffle)
+import ColorScheme (fringe)
+import qualified Config
+
 main :: IO ()   
 main = do
     -- Init settings
     let initialSettings = Settings {
-            settingsTileType = Fill,
+            settingsTileType = Border,
             settingsColorScheme = fringe,
             settingsGridSize = (4, 4)
         }
@@ -36,7 +37,7 @@ main = do
     timerUpdateChannel <- newBChan 10
     
     _ <- forkIO $ forever $ do
-        threadDelay 1000
+        threadDelay $ Config._REFRESH_RATE_MS * 1000
         now <- getCurrentTime
         writeBChan timerUpdateChannel (Tick now) 
     

@@ -7,7 +7,7 @@ import qualified Grid
 import Brick
 
 type ColorScheme = Grid -> ColorGetter 
-type ColorGetter = Int -> Attr
+type ColorGetter = Int -> V.Color
 type ColorMap = [V.Color]
 
 -- Thx gemini
@@ -46,8 +46,17 @@ _getFringeMapIndex g val =
         else col * 2 + 1
 
 fringe :: ColorScheme
-fringe _ 0 = V.defAttr 
 fringe g value = 
     let (rows, cols) = Grid.gridSize g
         colorMap = genRainbowColorMap (rows + cols - 2)
-    in V.withStyle (bg (colorMap !! _getFringeMapIndex g value)) V.bold
+    in (colorMap !! _getFringeMapIndex g value) 
+
+    -- in V.withStyle (bg (colorMap !! _getFringeMapIndex g value)) V.bold
+
+applyCGAsFg :: ColorGetter -> Int -> Attr
+applyCGAsFg _ 0 = V.defAttr 
+applyCGAsFg cg val = V.withStyle (fg $ cg val) V.bold
+
+applyCGAsBg :: ColorGetter -> Int -> Attr
+applyCGAsBg _ 0 = V.defAttr 
+applyCGAsBg cg val = V.withStyle (bg $ cg val) V.bold

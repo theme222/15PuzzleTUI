@@ -57,14 +57,15 @@ shuffle g = do
     -- Randomize the permuation of all tiles except for blank (its fixed at the end)
     perm <- _genCorrectPermutation g
     -- -2 because we will be moving it 2 more times before sending it out
-    let currentGrid = Grid size (-2) (Array.listArray ((0, 0), (rows-1, cols-1)) (perm ++ [0]))
+    let currentGrid = Grid size 0 (Array.listArray ((0, 0), (rows-1, cols-1)) (perm ++ [0]))
     
     -- Randomize the starting blank
     randCol <- randomRIO (0, cols-1)
     randRow <- randomRIO (0, rows-1)
     
     -- Move cols then rows
-    pure $ move (randRow, randCol) $ move (rows-1, randCol) currentGrid 
+    let shuffledGrid = move (randRow, randCol) $ move (rows-1, randCol) currentGrid 
+    pure $ shuffledGrid { gridMoveCount = 0 } -- Reset move count after shuffling
     
 _mappedPrinter :: Ipair -> Array2D -> Ipair -> IO ()
 _mappedPrinter size inArr index = do
@@ -128,7 +129,10 @@ move movePos g =
             | fst delta >  0 && snd delta == 0  -- move pos is below blank space
                 = (movePos, 0): [((i, blankX), inArr!(i+1, blankX)) | i <- [blankY..(moveY-1)]]
             | otherwise = []
-    in Grid gSize (gTotal + 1) (inArr // updates)
+        
+        updatedArr = inArr // updates
+    in  if updatedArr == inArr then g
+        else g { gridMoveCount = gTotal + 1, gridArr = updatedArr }
 
 -- move a block offsetted from the blank tile by Ipair
 offset :: Ipair -> Grid -> Grid
