@@ -51,7 +51,19 @@ fringe g value =
         colorMap = genRainbowColorMap (rows + cols - 2)
     in (colorMap !! _getFringeMapIndex g value) 
 
-    -- in V.withStyle (bg (colorMap !! _getFringeMapIndex g value)) V.bold
+row :: ColorScheme
+row g value = 
+    let (rows, _) = Grid.gridSize g
+        colorMap = genRainbowColorMap rows
+        (valRow, _) = Grid.getOriginalPos value g
+    in (colorMap !! valRow) 
+    
+col :: ColorScheme
+col g value = 
+    let (_, cols) = Grid.gridSize g
+        colorMap = genRainbowColorMap cols
+        (_, valCol) = Grid.getOriginalPos value g
+    in (colorMap !! valCol) 
 
 applyCGAsFg :: ColorGetter -> Int -> V.Attr
 applyCGAsFg _ 0 = V.defAttr 

@@ -4,7 +4,7 @@ import qualified Grid
 import Ipair
 import UI (WN, WidgetName (..))
 import ColorScheme (ColorGetter, applyCGAsFg, applyCGAsBg)
-import State (GameState(gameGrid, gameSettings), settingsColorScheme, gameTimerMs, TileType (..), settingsTileType)
+import State (GameState(..), PlayState(..), SettingsState(..), TileType (..), settingsTileType)
 
 import Brick
 import Data.List (intersperse)
@@ -42,10 +42,10 @@ _applyPadding tt len w =
 
 numberTileUI :: GameState -> Ipair -> Widget WN
 numberTileUI state pos =
-    let inArr = Grid.gridArr (gameGrid state)
+    let inArr = Grid.gridArr ((playGrid . gamePlay) state)
         val = inArr ! pos
         display = _standardizeText $ show val
-        cg = settingsColorScheme (gameSettings state) (gameGrid state)
+        cg = settingsColorScheme (gameSettings state) ((playGrid . gamePlay) state)
         tt = settingsTileType (gameSettings state)
     in clickable 
         (Tilename pos) 
@@ -54,7 +54,7 @@ numberTileUI state pos =
 -- recursively build the columns
 _genGridColUI :: GameState -> Ipair -> Widget WN  
 _genGridColUI state pos = 
-    let size = (Grid.gridSize . gameGrid) state
+    let size = (Grid.gridSize . playGrid . gamePlay) state
         (_, colCount) = size
         (_, currentCol) = pos
     in if currentCol == colCount - 1 then numberTileUI state pos
@@ -63,7 +63,7 @@ _genGridColUI state pos =
 -- recursively build the rows 
 _genGridRowUI :: GameState -> Ipair -> Widget WN
 _genGridRowUI state pos  = 
-    let size = (Grid.gridSize . gameGrid) state
+    let size = (Grid.gridSize . playGrid . gamePlay) state
         (rowCount, _) = size
         (currentRow, _) = pos
     in if currentRow == rowCount - 1 then _genGridColUI state pos
@@ -74,11 +74,11 @@ gridUI state = hCenter $ _genGridRowUI state (0, 0)
 
 gameStatUI :: GameState -> Widget WN
 gameStatUI state = 
-    let totalMs = gameTimerMs state
+    let totalMs = playTimerMs (gamePlay state)
         seconds = (totalMs `div` 1000) `mod` 60
         minutes = totalMs `div` 60000
         ms      = totalMs `mod` 1000
-        moveCount = (Grid.gridMoveCount . gameGrid) state
+        moveCount = (Grid.gridMoveCount . playGrid . gamePlay) state
         
         timeStr = printf "%02d:%02d.%03d" minutes seconds ms
     in hCenter $ border $ str ("Current Time: " ++ timeStr ++ " Current moves: " ++ show moveCount)

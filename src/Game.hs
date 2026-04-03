@@ -39,21 +39,10 @@ handleEvent (VtyEvent (V.EvKey V.KRight []))               = Action.dispatch $ a
 ---- Mouse events ----
 handleEvent (MouseDown (UI.Tilename pos) V.BLeft _ _)      = Action.dispatch $ Action Action.Point pos
 ---- Mouse events ----
----- Custom events ----
-handleEvent (AppEvent (Tick currentTime)) = do 
-    state <- get
-    when (gameIsRunning state) $
-        case gameLastTickTime state of 
-            Just lastTime -> do
-                let diffSeconds = realToFrac (diffUTCTime currentTime lastTime)
-                    diffMs = round (diffSeconds * 1000)
-                
-                put $ state {
-                    gameTimerMs = gameTimerMs state + diffMs,
-                    gameLastTickTime = Just currentTime
-                }
-            Nothing -> put $ state { gameLastTickTime = Just currentTime }
----- Custom events ----
+---- Custom event ----
+handleEvent (AppEvent (Tick _)) = Action.dispatch $ action Action.Refresh
+
+---- Custom event ----
 handleEvent _                                              = return () -- Ignore all other keys
 
 

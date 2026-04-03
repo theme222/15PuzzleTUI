@@ -7,9 +7,11 @@ import Grid (Grid)
 import qualified UI
 
 import Control.Monad.IO.Class (liftIO)
-import Brick (EventM, modify, get)
+import Data.Time.Clock (getCurrentTime, diffUTCTime)
+import Brick (EventM, modify, get, put)
+import Control.Monad (when)
 
-data ActionType = Left | Right | Up | Down | Point | Menu | Reset deriving (Eq, Show)
+data ActionType = Left | Right | Up | Down | Point | Refresh | Menu | Reset deriving (Eq, Show)
 
 data Action = Action {
     actionType :: ActionType,
@@ -29,23 +31,47 @@ dispatch a = do
 
 _playSceneActionHandler :: Action -> EventM UI.WidgetName GameState ()
 _playSceneActionHandler a = do
-    state <- get -- Grab the state
+    gameState <- get -- Grab the state
+    time <- liftIO getCurrentTime
+    let 
+        oldState = gamePlay gameState
+        g = playGrid oldState
+        state =  -- Update time
+            if playIsRunning oldState then
+                case playLastTickTime oldState of 
+                    Just lastTime -> do
+                        let diffSeconds = realToFrac (diffUTCTime time lastTime)
+                            diffMs = round (diffSeconds * 1000)
+                        
+                        oldState {
+                            playTimerMs = playTimerMs oldState + diffMs,
+                            playLastTickTime = Just time
+                        }
+                    Nothing -> oldState { playLastTickTime = Just time }
+            else oldState { playLastTickTime = Just time }
+    
     case actionType a of
-        Action.Left  -> modify (\s -> _checkBoardAndApplyMove s $ Grid.offset (0, 1) (gameGrid s))
-        Action.Right -> modify (\s -> _checkBoardAndApplyMove s $ Grid.offset (0, -1) (gameGrid s))
-        Action.Up    -> modify (\s -> _checkBoardAndApplyMove s $ Grid.offset (1, 0) (gameGrid s))
-        Action.Down  -> modify (\s -> _checkBoardAndApplyMove s $ Grid.offset (-1, 0) (gameGrid s))
-        Action.Point -> modify (\s -> _checkBoardAndApplyMove s $ Grid.move (actionPosition a) (gameGrid s))
+        Action.Left  -> do 
+            when (Grid.validOffsetPos g (0, 1)) (put gameState { gamePlay = _checkBoardAndApplyMove state $ Grid.offset (0, 1) g})
+        Action.Right -> do
+            when (Grid.validOffsetPos g (0, -1)) (put gameState { gamePlay = _checkBoardAndApplyMove state $ Grid.offset (0, -1) g})
+        Action.Up    -> do
+            when (Grid.validOffsetPos g (1, 0)) (put gameState { gamePlay = _checkBoardAndApplyMove state $ Grid.offset (1, 0) g})
+        Action.Down  -> do
+            when (Grid.validOffsetPos g (-1, 0)) (put gameState { gamePlay = _checkBoardAndApplyMove state $ Grid.offset (-1, 0) g})
+        Action.Point -> do
+            when (Grid.validMovePos g (actionPosition a))
+                (put gameState { gamePlay = _checkBoardAndApplyMove state $ Grid.move (actionPosition a) g})
         Action.Menu  -> modify (\s -> s { gameScene = SettingsScene })
         
         -- The Magic Happens Here! (Thx chatgpt)
         Action.Reset -> do
             -- 1. liftIO temporarily opens the IO portal so we can shuffle
-            newGrid <- liftIO $ Grid.shuffle (gameGrid state)
+            newGrid <- liftIO $ Grid.shuffle g
             -- 2. Modify the state with our pure, newly shuffled grid
-            modify (\s -> s { gameGrid = newGrid, gameIsRunning = False, gameTimerMs = 0 })
-            
-        _ -> pure ()
+            modify (\s -> s { gamePlay = state { playGrid = newGrid, playIsRunning = False, playIsFinished = False, playLastTickTime = Nothing, playTimerMs = 0 }})
+        
+        Action.Refresh -> put gameState { gamePlay = state } -- Force UI refresh
 
 _settingsSceneActionHandler :: Action -> EventM UI.WidgetName GameState ()
 _settingsSceneActionHandler a = do
@@ -54,15 +80,8 @@ _settingsSceneActionHandler a = do
         Action.Menu  -> modify (\s -> s { gameScene = PlayScene })
         _ -> pure ()
 
-_checkBoardAndApplyMove :: GameState -> Grid -> GameState
-_checkBoardAndApplyMove state newGrid = -- new Grid here is what the grid would be if it had done the move
-    let isRunning = gameIsRunning state
-    in  
-        if gameTimerMs state == 0 && not isRunning then -- First move
-            state { gameIsRunning = True, gameGrid = newGrid }
-        else if not isRunning then -- Already solved
-            state
-        else if Grid.isSolved newGrid then -- Just finished solving
-            state { gameIsRunning = False, gameGrid = newGrid }
-        else -- Still not solved
-            state { gameGrid = newGrid }
+_checkBoardAndApplyMove :: PlayState -> Grid -> PlayState
+_checkBoardAndApplyMove ps newGrid  -- new Grid here is what the grid would be if it had done the move
+    | playIsFinished ps = ps
+    | Grid.isSolved newGrid = ps { playIsRunning = False, playIsFinished = True, playGrid = newGrid }
+    | otherwise = ps { playIsRunning = True, playGrid = newGrid }

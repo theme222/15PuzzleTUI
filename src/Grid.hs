@@ -101,15 +101,15 @@ getOriginalPos val g =
 validPos :: Grid -> Ipair -> Bool
 validPos g = Ix.inRange $ Array.bounds $ gridArr g
 
-validPosAround :: Ipair -> Grid -> [Ipair]
-validPosAround pos g =  
-    filter (validPos g) [ 
-        pos ~+ (0, 1),
-        pos ~+ (0, -1),
-        pos ~+ (1, 0),
-        pos ~+ (-1, 0)
-    ]
-
+-- Checks whether or not the position will change the grid or not
+validMovePos :: Grid -> Ipair -> Bool
+validMovePos g movePos = 
+    let blankPos = getPos 0 g
+        delta = movePos ~- blankPos
+    in  validPos g movePos -- Must be inside the possible index
+        && delta /= (0, 0) -- Not the blank position
+        && (fst delta == 0 || snd delta == 0) -- Must be inline with an axis of the blank tile
+    
 -- Move a tile with the pos of Ipair
 move :: Ipair -> Grid -> Grid
 move movePos g =
@@ -117,11 +117,10 @@ move movePos g =
         delta = movePos ~- blankPos
         (moveY, moveX) = movePos
         (blankY, blankX) = blankPos
-        (Grid gSize gTotal inArr) = g
+        (Grid _ gTotal inArr) = g
         
         updates -- calculate the updates
-            | not (validPos g movePos) || delta == (0, 0) || (fst delta /= 0 && snd delta /= 0) -- Either point is the blank or point not inline
-                = []
+            | not (validMovePos g movePos) = []
             | fst delta == 0 && snd delta <  0 -- move pos is left of blank space
                 = (movePos, 0): [((blankY, i), inArr!(blankY, i-1)) | i <- [(moveX+1)..blankX]]
             | fst delta == 0 && snd delta >  0 -- move pos is right of blank space
@@ -130,7 +129,7 @@ move movePos g =
                 = (movePos, 0): [((i, blankX), inArr!(i-1, blankX)) | i <- [(moveY+1)..blankY]]
             | fst delta >  0 && snd delta == 0  -- move pos is below blank space
                 = (movePos, 0): [((i, blankX), inArr!(i+1, blankX)) | i <- [blankY..(moveY-1)]]
-            | otherwise = []
+            | otherwise = error "Your logic is invalid dumbass"
         
         updatedArr = inArr // updates
     in  if updatedArr == inArr then g
@@ -139,6 +138,15 @@ move movePos g =
 -- move a block offsetted from the blank tile by Ipair
 offset :: Ipair -> Grid -> Grid
 offset movePos g = move (getPos 0 g ~+ movePos) g
+
+validOffsetPos :: Grid -> Ipair -> Bool
+validOffsetPos g os =
+    let blankPos = getPos 0 g
+        movePos = blankPos ~+ os
+        delta = movePos ~- blankPos
+    in  validPos g movePos -- Must be inside the possible index
+        && delta /= (0, 0) -- Not the blank position
+        && (fst delta == 0 || snd delta == 0) -- Must be inline with an axis of the blank tile
 
 isSolved :: Grid -> Bool
 isSolved g = gridArr g == _genOrdered2DArray (gridSize g)
