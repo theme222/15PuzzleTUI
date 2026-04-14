@@ -3,13 +3,14 @@ module Action where
 import State
 import Ipair (Ipair, nilPair)
 import qualified Grid
-import Grid (Grid)
+import Grid (Grid, grid)
 import qualified UI
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Brick (EventM, modify, get, put)
 import Control.Monad (when)
+import Scene.SettingsScene (getSettingValueByIndex, settingsIncrement, settingsDecrement, settingRows)
 
 data ActionType = Left | Right | Up | Down | Point | Refresh | Menu | Reset deriving (Eq, Show)
 
@@ -34,6 +35,7 @@ _playSceneActionHandler a = do
     gameState <- get -- Grab the state
     time <- liftIO getCurrentTime
     let 
+        ss = gameSettings gameState
         oldState = gamePlay gameState
         g = playGrid oldState
         state =  -- Update time
@@ -67,7 +69,7 @@ _playSceneActionHandler a = do
         -- The Magic Happens Here! (Thx chatgpt)
         Action.Reset -> do
             -- 1. liftIO temporarily opens the IO portal so we can shuffle
-            newGrid <- liftIO $ Grid.shuffle g
+            newGrid <- liftIO $ Grid.shuffle $ grid $ settingsGridSize ss -- Read the latest grid size from settings
             -- 2. Modify the state with our pure, newly shuffled grid
             modify (\s -> s { gamePlay = state { playGrid = newGrid, playIsRunning = False, playIsFinished = False, playLastTickTime = Nothing, playTimerMs = 0 }})
         
@@ -75,8 +77,18 @@ _playSceneActionHandler a = do
 
 _settingsSceneActionHandler :: Action -> EventM UI.WidgetName GameState ()
 _settingsSceneActionHandler a = do
-    state <- get
+    gs <- get
+    let ss = gameSettings gs
+        rIdx = settingsRowHover ss
+        (_, getter, setter) = settingRows !! rIdx
+        val = getter ss
+        set = setter ss 
+        
     case actionType a of
+        Action.Left -> modify (\s -> s { gameSettings = set (settingsDecrement val) })
+        Action.Right -> modify (\s -> s { gameSettings = set (settingsIncrement val) })
+        Action.Up -> modify (\s -> s { gameSettings = ss { settingsRowHover = max 0 (rIdx - 1) }})
+        Action.Down -> modify (\s -> s { gameSettings = ss { settingsRowHover = min (length settingRows - 1) (rIdx + 1) }})
         Action.Menu  -> modify (\s -> s { gameScene = PlayScene })
         _ -> pure ()
 

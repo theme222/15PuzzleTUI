@@ -3,7 +3,7 @@ module Scene.PlayScene where
 import qualified Grid
 import Ipair
 import UI (WN, WidgetName (..))
-import ColorScheme (ColorGetter, applyCGAsFg, applyCGAsBg)
+import ColorScheme (ColorGetter, applyCGAsFg, applyCGAsBg, ColorScheme (..))
 import State (GameState(..), PlayState(..), SettingsState(..), TileType (..), settingsTileType)
 
 import Brick
@@ -46,7 +46,7 @@ numberTileUI state pos =
     let inArr = Grid.gridArr ((playGrid . gamePlay) state)
         val = inArr ! pos
         display = _standardizeText $ show val
-        cg = (snd . settingsColorScheme) (gameSettings state) ((playGrid . gamePlay) state)
+        cg = (colorSchemeFunc . settingsColorScheme) (gameSettings state) ((playGrid . gamePlay) state)
         tt = settingsTileType (gameSettings state)
     in clickable 
         (Tilename pos) 

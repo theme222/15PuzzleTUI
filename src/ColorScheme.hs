@@ -6,7 +6,17 @@ import qualified Grid
 import qualified Graphics.Vty as V
 import Brick
 
-type ColorScheme = (String, Grid -> ColorGetter) -- String is used as a function identifier
+data ColorScheme = ColorScheme {
+    colorSchemeName :: String,
+    colorSchemeFunc:: Grid -> ColorGetter
+}
+
+instance Show ColorScheme where
+    show (ColorScheme name _) = name
+    
+instance Eq ColorScheme where
+    (==) (ColorScheme n1 _) (ColorScheme n2 _) = n1 == n2
+
 type ColorGetter = Int -> V.Color
 type ColorMap = [V.Color]
 
@@ -46,16 +56,18 @@ _getFringeMapIndex g val =
         else col * 2 + 1
 
 fringe :: ColorScheme
-fringe = ("fringe", 
-    \g value ->
+fringe = ColorScheme "fringe"
+    (
+        \g value ->
         let (rows, cols) = Grid.gridSize g
             colorMap = genRainbowColorMap (rows + cols - 2)
         in colorMap !! _getFringeMapIndex g value
     )
 
 row :: ColorScheme
-row = ("row", 
-    \g value ->
+row = ColorScheme "row"
+    (
+        \g value ->
         let (rows, _) = Grid.gridSize g
             colorMap = genRainbowColorMap rows
             (valRow, _) = Grid.getOriginalPos value g
@@ -63,8 +75,9 @@ row = ("row",
     )
     
 col :: ColorScheme
-col = ("col", 
-    \g value ->
+col = ColorScheme "col"
+    (
+        \g value ->
         let (_, cols) = Grid.gridSize g
             colorMap = genRainbowColorMap cols
             (_, valCol) = Grid.getOriginalPos value g

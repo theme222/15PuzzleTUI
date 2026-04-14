@@ -76,7 +76,8 @@ executable 15PuzzleTUI
                       brick,
                       vty,
                       vty-crossplatform,
-                      time
+                      time,
+                      ilist
 
     -- Directories containing source files.
     hs-source-dirs:   app, src
