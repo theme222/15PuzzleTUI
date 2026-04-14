@@ -13,6 +13,7 @@ import Brick.Widgets.Center
 import Text.Printf (printf)
 import Brick.Widgets.Border (border)
 import Brick.Widgets.Border.Style (unicodeBold)
+import qualified Graphics.Vty as V
 
 _getPaddingSize :: Char -> Int -> Int
 _getPaddingSize 'l' v = 5 - (v `div` 2)
@@ -45,7 +46,7 @@ numberTileUI state pos =
     let inArr = Grid.gridArr ((playGrid . gamePlay) state)
         val = inArr ! pos
         display = _standardizeText $ show val
-        cg = settingsColorScheme (gameSettings state) ((playGrid . gamePlay) state)
+        cg = (snd . settingsColorScheme) (gameSettings state) ((playGrid . gamePlay) state)
         tt = settingsTileType (gameSettings state)
     in clickable 
         (Tilename pos) 
@@ -70,7 +71,7 @@ _genGridRowUI state pos  =
     else _genGridColUI state pos <=> _genGridRowUI state (pos ~+ (1, 0))
     
 gridUI :: GameState -> Widget WN 
-gridUI state = hCenter $ _genGridRowUI state (0, 0)
+gridUI state = _genGridRowUI state (0, 0)
 
 gameStatUI :: GameState -> Widget WN
 gameStatUI state = 
@@ -81,9 +82,23 @@ gameStatUI state =
         moveCount = (Grid.gridMoveCount . playGrid . gamePlay) state
         
         timeStr = printf "%02d:%02d.%03d" minutes seconds ms
-    in hCenter $ border $ str ("Current Time: " ++ timeStr ++ " Current moves: " ++ show moveCount)
+    in border $ str ("Current Time: " ++ timeStr ++ " Current moves: " ++ show moveCount)
+    
+_inlineControlStyle :: Widget WN -> Widget WN
+_inlineControlStyle = modifyDefAttr (\_ -> fg V.red)
+
+controlsUI :: Widget WN
+controlsUI = border $ padLeftRight 4 $ padTopBottom 2 $ modifyDefAttr (`V.withStyle` V.bold) (
+        (str "Move up:    " <+> _inlineControlStyle (str "w, ⬆")) <=>
+        (str "Move down:  " <+> _inlineControlStyle (str "s, ⬇")) <=>
+        (str "Move left:  " <+> _inlineControlStyle (str "a, ⬅")) <=>
+        (str "Move right: " <+> _inlineControlStyle (str "d, ➡")) <=>
+        (str "Reset:      " <+> _inlineControlStyle (str "r, <space>")) <=>
+        (str "Settings:   " <+> _inlineControlStyle (str "m")) <=>
+        (str "Quit:       " <+> _inlineControlStyle (str "q"))
+    ) 
 
 draw :: GameState -> Widget WN
 draw state = 
     let settings = gameSettings state
-    in center $ gridUI state <=> gameStatUI state 
+    in center $ padLeftRight 4 (gridUI state <=> gameStatUI state) <+> controlsUI

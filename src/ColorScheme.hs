@@ -6,7 +6,7 @@ import qualified Grid
 import qualified Graphics.Vty as V
 import Brick
 
-type ColorScheme = Grid -> ColorGetter 
+type ColorScheme = (String, Grid -> ColorGetter) -- String is used as a function identifier
 type ColorGetter = Int -> V.Color
 type ColorMap = [V.Color]
 
@@ -46,24 +46,30 @@ _getFringeMapIndex g val =
         else col * 2 + 1
 
 fringe :: ColorScheme
-fringe g value = 
-    let (rows, cols) = Grid.gridSize g
-        colorMap = genRainbowColorMap (rows + cols - 2)
-    in (colorMap !! _getFringeMapIndex g value) 
+fringe = ("fringe", 
+    \g value ->
+        let (rows, cols) = Grid.gridSize g
+            colorMap = genRainbowColorMap (rows + cols - 2)
+        in colorMap !! _getFringeMapIndex g value
+    )
 
 row :: ColorScheme
-row g value = 
-    let (rows, _) = Grid.gridSize g
-        colorMap = genRainbowColorMap rows
-        (valRow, _) = Grid.getOriginalPos value g
-    in (colorMap !! valRow) 
+row = ("row", 
+    \g value ->
+        let (rows, _) = Grid.gridSize g
+            colorMap = genRainbowColorMap rows
+            (valRow, _) = Grid.getOriginalPos value g
+        in colorMap !! valRow
+    )
     
 col :: ColorScheme
-col g value = 
-    let (_, cols) = Grid.gridSize g
-        colorMap = genRainbowColorMap cols
-        (_, valCol) = Grid.getOriginalPos value g
-    in (colorMap !! valCol) 
+col = ("col", 
+    \g value ->
+        let (_, cols) = Grid.gridSize g
+            colorMap = genRainbowColorMap cols
+            (_, valCol) = Grid.getOriginalPos value g
+        in colorMap !! valCol
+    )
 
 applyCGAsFg :: ColorGetter -> Int -> V.Attr
 applyCGAsFg _ 0 = V.defAttr 
