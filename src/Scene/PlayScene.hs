@@ -89,6 +89,7 @@ _inlineControlStyle = modifyDefAttr (\_ -> fg V.red)
 
 controlsUI :: Widget WN
 controlsUI = border $ padLeftRight 4 $ padTopBottom 2 $ modifyDefAttr (`V.withStyle` V.bold) (
+        (hLimit 17 (hCenter  (str "Controls")) <=> str " ") <=>
         (str "Move up:    " <+> _inlineControlStyle (str "w, ⬆")) <=>
         (str "Move down:  " <+> _inlineControlStyle (str "s, ⬇")) <=>
         (str "Move left:  " <+> _inlineControlStyle (str "a, ⬅")) <=>
@@ -99,6 +100,4 @@ controlsUI = border $ padLeftRight 4 $ padTopBottom 2 $ modifyDefAttr (`V.withSt
     ) 
 
 draw :: GameState -> Widget WN
-draw state = 
-    let settings = gameSettings state
-    in center $ padLeftRight 4 (gridUI state <=> gameStatUI state) <+> controlsUI
+draw state = center $ padLeftRight 4 (gridUI state <=> gameStatUI state) <+> controlsUI

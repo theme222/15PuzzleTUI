@@ -90,6 +90,6 @@ _drawSettingRow ss rowIndex (name, getter, _) =
 draw :: GameState -> Widget WN
 draw gs = 
     let ss = gameSettings gs
-    in center $ border $ vLimit (1 + length settingRows) $ hLimit 25 $ vBox $
-        hCenter (str "Settings")
+    in center $ border $ padLeftRight 2 $ vLimit (1 + length settingRows) $ hLimit 25 $ vBox $
+        hCenter (modifyDefAttr (const $ V.withStyle (fg V.brightBlue) V.bold) $ str "Settings")
         : imap (_drawSettingRow ss) settingRows
