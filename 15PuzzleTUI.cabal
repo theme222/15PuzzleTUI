@@ -54,7 +54,7 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -threaded -O2 -optc-O3 -funfolding-use-threshold=200
 
-executable 15PuzzleTUI
+executable 15p
     -- Import common warning flags.
     import:           warnings
 
