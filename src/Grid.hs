@@ -135,9 +135,12 @@ move movePos g =
     in  if updatedArr == inArr then g
         else g { gridMoveCount = gTotal + 1, gridArr = updatedArr }
 
+getMovePosFromOffset :: Ipair -> Grid -> Ipair
+getMovePosFromOffset os g = getPos 0 g ~+ os
+
 -- move a block offsetted from the blank tile by Ipair
 offset :: Ipair -> Grid -> Grid
-offset movePos g = move (getPos 0 g ~+ movePos) g
+offset movePos g = move (getMovePosFromOffset movePos g) g
 
 validOffsetPos :: Grid -> Ipair -> Bool
 validOffsetPos g os =

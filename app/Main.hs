@@ -13,6 +13,7 @@ import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (forever)
 import Data.Time.Clock (getCurrentTime)
+import Save (loadLeaderboard, Leaderboard (..))
 
 main :: IO ()   
 main = do
@@ -25,12 +26,17 @@ main = do
         }
         
     randomGrid <- shuffle $ grid $ settingsGridSize initialSettings
+
+    -- load leaderboard
+    currentLeaderboard <- loadLeaderboard (settingsGridSize initialSettings)
+    
     let initialPlay = PlayState {
             playGrid = randomGrid,
             playIsRunning = False,
             playIsFinished = False,
             playTimerMs = 0,
-            playLastTickTime = Nothing
+            playLastTickTime = Nothing,
+            playLeaderboard = currentLeaderboard
         }
         
     -- Init initial state

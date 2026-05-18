@@ -52,7 +52,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall -threaded -O2 -optc-O3 -funfolding-use-threshold=200
+    ghc-options: -threaded -O2 -optc-O3 -funfolding-use-threshold=200
 
 executable 15PuzzleTUI
     -- Import common warning flags.
@@ -62,7 +62,17 @@ executable 15PuzzleTUI
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Grid, Ipair, Game, Scene.PlayScene, Scene.SettingsScene, UI, Action, State, ColorScheme, Config
+    other-modules:    Grid,
+                      Ipair, 
+                      Game,
+                      Scene.PlayScene,
+                      Scene.SettingsScene,
+                      UI,
+                      Action,
+                      State,
+                      ColorScheme,
+                      Config,
+                      Save,
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -77,7 +87,12 @@ executable 15PuzzleTUI
                       vty,
                       vty-crossplatform,
                       time,
-                      ilist
+                      ilist,
+                      aeson,
+                      directory,
+                      filepath,
+                      generic-aeson,
+                      split
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

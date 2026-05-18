@@ -5,6 +5,7 @@ import Ipair (Ipair)
 import ColorScheme (ColorScheme)
 
 import Data.Time.Clock (UTCTime)
+import Save (Leaderboard)
 
 data Scene = PlayScene | SettingsScene deriving (Show, Eq)
 data TileType = Fill | Border deriving (Show, Eq)
@@ -22,7 +23,8 @@ data PlayState = PlayState {
     playIsRunning :: Bool,
     playIsFinished :: Bool,
     playTimerMs :: Int,
-    playLastTickTime :: Maybe UTCTime
+    playLastTickTime :: Maybe UTCTime,
+    playLeaderboard :: Leaderboard 
 }
 
 -- Game State

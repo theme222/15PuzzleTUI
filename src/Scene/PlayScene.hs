@@ -14,6 +14,8 @@ import Text.Printf (printf)
 import Brick.Widgets.Border (border)
 import Brick.Widgets.Border.Style (unicodeBold)
 import qualified Graphics.Vty as V
+import Data.List.Index (imap)
+import Save (Leaderboard(..))
 
 _getPaddingSize :: Char -> Int -> Int
 _getPaddingSize 'l' v = 5 - (v `div` 2)
@@ -73,23 +75,27 @@ _genGridRowUI state pos  =
 gridUI :: GameState -> Widget WN 
 gridUI state = _genGridRowUI state (0, 0)
 
+getFormattedTime :: Int -> String
+getFormattedTime totalMs =
+    let seconds = (totalMs `div` 1000) `mod` 60
+        minutes = totalMs `div` 60000
+        ms      = totalMs `mod` 1000
+    in printf "%02d:%02d.%03d" minutes seconds ms
+
 gameStatUI :: GameState -> Widget WN
 gameStatUI state = 
     let totalMs = playTimerMs (gamePlay state)
-        seconds = (totalMs `div` 1000) `mod` 60
-        minutes = totalMs `div` 60000
-        ms      = totalMs `mod` 1000
         moveCount = (Grid.gridMoveCount . playGrid . gamePlay) state
         
-        timeStr = printf "%02d:%02d.%03d" minutes seconds ms
+        timeStr = getFormattedTime totalMs
     in border $ str ("Current Time: " ++ timeStr ++ " Current moves: " ++ show moveCount)
     
 _inlineControlStyle :: Widget WN -> Widget WN
 _inlineControlStyle = modifyDefAttr (\_ -> fg V.red)
 
 controlsUI :: Widget WN
-controlsUI = border $ padLeftRight 4 $ padTopBottom 2 $ modifyDefAttr (`V.withStyle` V.bold) (
-        (hLimit 17 (hCenter  (str "Controls")) <=> str " ") <=>
+controlsUI = border $ padLeftRight 4 $ padTopBottom 1 $ hLimit 23 $ modifyDefAttr (`V.withStyle` V.bold) (
+        (hCenter (str "Controls") <=> str " ") <=>
         (str "Move up:    " <+> _inlineControlStyle (str "w, ⬆")) <=>
         (str "Move down:  " <+> _inlineControlStyle (str "s, ⬇")) <=>
         (str "Move left:  " <+> _inlineControlStyle (str "a, ⬅")) <=>
@@ -99,5 +105,16 @@ controlsUI = border $ padLeftRight 4 $ padTopBottom 2 $ modifyDefAttr (`V.withSt
         (str "Quit:       " <+> _inlineControlStyle (str "q"))
     ) 
 
+_formatLeaderboardPos :: Int -> Int -> Widget WN 
+_formatLeaderboardPos index item = 
+    str (show (index + 1) ++ ". " ++ getFormattedTime item)
+
+leaderboardUI :: GameState -> Widget WN
+leaderboardUI state = 
+    let leaderboard = (playLeaderboard . gamePlay) state
+        leaderboardEntries = vBox $ imap _formatLeaderboardPos (leaderboardRankings leaderboard)
+    in  border $ padLeftRight 4 $ padTopBottom 1 $ hLimit 23 $ 
+        hCenter (str ("Fastest Times For " ++ show (leaderboardSize leaderboard)) <=> str " ") <=> leaderboardEntries
+
 draw :: GameState -> Widget WN
-draw state = center $ padLeftRight 4 (gridUI state <=> gameStatUI state) <+> controlsUI
+draw state = center $ padLeftRight 4 (gridUI state <=> gameStatUI state) <+> (controlsUI <=> leaderboardUI state)
