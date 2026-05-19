@@ -31,7 +31,6 @@ dispatch a = do
     else if gameScene state == SettingsScene then settingsSceneActionHandler a
     else pure ()
     
--- TODO: FINISH THIS LOL IM SORRY
 checkBoardAndApplyMove :: GameState -> PlayState -> Ipair -> EventM UI.WidgetName GameState ()
 checkBoardAndApplyMove gameState newPlayState pos = do  -- new Grid here is what the grid would be if it had done the move
     let oldPlayState = gamePlay gameState

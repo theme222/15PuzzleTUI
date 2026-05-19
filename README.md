@@ -35,3 +35,7 @@ command line by simply typing `./15p`.
 ## Gallery
 
 These images were taken in game on the [Ghostty](https://ghostty.org/) terminal emulator.
+
+![Game](https://github.com/theme222/15PuzzleTUI/blob/main/images/game.png)
+
+![Settings](https://github.com/theme222/15PuzzleTUI/blob/main/images/settings.png)
