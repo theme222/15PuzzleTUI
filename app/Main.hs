@@ -43,7 +43,8 @@ main = do
     let initialState = State.GameState { 
             gameScene = PlayScene,
             gameSettings = initialSettings,
-            gamePlay = initialPlay
+            gamePlay = initialPlay,
+            gameDebug = DebugState { debugStr = "" }
         }
         
     -- Create a channel for timer (idk what this means)

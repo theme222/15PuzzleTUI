@@ -73,6 +73,7 @@ executable 15p
                       ColorScheme,
                       Config,
                       Save,
+                      Solver
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -92,7 +93,8 @@ executable 15p
                       directory,
                       filepath,
                       generic-aeson,
-                      split
+                      split,
+                      vector
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

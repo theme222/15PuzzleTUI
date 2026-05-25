@@ -27,9 +27,14 @@ data PlayState = PlayState {
     playLeaderboard :: Leaderboard 
 }
 
+data DebugState = DebugState {
+    debugStr :: String
+}
+
 -- Game State
 data GameState = GameState {
     gameScene :: Scene,
     gameSettings :: SettingsState,
-    gamePlay :: PlayState -- What a name btw
+    gamePlay :: PlayState,
+    gameDebug :: DebugState
 } 

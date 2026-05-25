@@ -4,11 +4,11 @@ import qualified Grid
 import Ipair
 import UI (WN, WidgetName (..))
 import ColorScheme (ColorGetter, applyCGAsFg, applyCGAsBg, ColorScheme (..))
-import State (GameState(..), PlayState(..), SettingsState(..), TileType (..), settingsTileType)
+import State (GameState(..), PlayState(..), SettingsState(..), TileType (..), settingsTileType, DebugState (..))
 
 import Brick
 import Data.List (intersperse)
-import Data.Array ((!))
+import Data.Array.Unboxed ((!))
 import Brick.Widgets.Center
 import Text.Printf (printf)
 import Brick.Widgets.Border (border)
@@ -45,10 +45,10 @@ _applyPadding tt len w =
 
 numberTileUI :: GameState -> Ipair -> Widget WN
 numberTileUI state pos =
-    let inArr = Grid.gridArr ((playGrid . gamePlay) state)
-        val = inArr ! pos
+    let grid = playGrid . gamePlay $ state
+        val = Grid.getTile grid pos
         display = _standardizeText $ show val
-        cg = (colorSchemeFunc . settingsColorScheme) (gameSettings state) ((playGrid . gamePlay) state)
+        cg = (colorSchemeFunc . settingsColorScheme) (gameSettings state) grid
         tt = settingsTileType (gameSettings state)
     in clickable 
         (Tilename pos) 
@@ -102,6 +102,7 @@ controlsUI = border $ padLeftRight 4 $ padTopBottom 1 $ hLimit 23 $ modifyDefAtt
         (str "Move right: " <+> _inlineControlStyle (str "d, ➡")) <=>
         (str "Reset:      " <+> _inlineControlStyle (str "r, <space>")) <=>
         (str "Settings:   " <+> _inlineControlStyle (str "m")) <=>
+        (str "Help:       " <+> _inlineControlStyle (str "h")) <=>
         (str "Quit:       " <+> _inlineControlStyle (str "q"))
     ) 
 
@@ -116,5 +117,8 @@ leaderboardUI state =
     in  border $ padLeftRight 4 $ padTopBottom 1 $ hLimit 23 $ 
         hCenter (str ("Fastest Times For " ++ show (leaderboardSize leaderboard)) <=> str " ") <=> leaderboardEntries
 
+debugUI :: GameState -> Widget WN
+debugUI state = str $ (debugStr . gameDebug) state
+
 draw :: GameState -> Widget WN
-draw state = center $ padLeftRight 4 (gridUI state <=> gameStatUI state) <+> (controlsUI <=> leaderboardUI state)
+draw state = center $ (padLeftRight 4 (gridUI state <=> gameStatUI state) <+> (controlsUI <=> leaderboardUI state)) <=> debugUI state

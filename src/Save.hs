@@ -1,5 +1,4 @@
 -- Saves all relevent records to JSON
-{-# LANGUAGE DeriveGeneric #-}
 
 module Save where
 

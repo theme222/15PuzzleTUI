@@ -8,12 +8,14 @@ import qualified UI
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
-import Brick (EventM, modify, get, put)
+import Brick (EventM, modify, get, put, halt)
 import Control.Monad (when)
 import Scene.SettingsScene (getSettingValueByIndex, settingsIncrement, settingsDecrement, settingRows)
 import Save (loadLeaderboard, Leaderboard (..), storeLeaderboard, formatLeaderboardRankings)
+import Solver (idaStar, linearConflict, manhattanDistance)
+import Text.Printf (printf)
 
-data ActionType = Left | Right | Up | Down | Point | Refresh | Menu | Reset deriving (Eq, Show)
+data ActionType = Left | Right | Up | Down | Point | Refresh | Menu | Help | Reset deriving (Eq, Show)
 
 data Action = Action {
     actionType :: ActionType,
@@ -85,6 +87,12 @@ playSceneActionHandler a = do
         Action.Down  -> checkBoardAndApplyMove gameState state $ Grid.getMovePosFromOffset (-1,0) oldGrid
         Action.Point -> checkBoardAndApplyMove gameState state $ actionPosition a
         Action.Menu  -> modify (\s -> s { gameScene = SettingsScene })
+        Action.Help  -> do
+            let searchResult = idaStar oldGrid
+            error $ show searchResult
+            -- let linearConfH = linearConflict oldGrid
+            --     manhattanDistH = manhattanDistance oldGrid
+            -- modify(\s -> s { gameDebug = DebugState { debugStr = printf "Linear conflict: %d, Manhattan distance: %d\n" linearConfH manhattanDistH } })
         
         Action.Reset -> do
             let newGridSize = settingsGridSize ss

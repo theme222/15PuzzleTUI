@@ -1,39 +1,69 @@
+{-# LANGUAGE LambdaCase #-} 
 module Grid where
 
 import Ipair (Ipair, (~-), (~+))
 
 import Control.Monad (when)
-import qualified Data.Array as Array
 import Text.Printf (printf)
-import Data.Array ((!), Array, (//))
+import Data.Vector.Unboxed ((!), Vector, (//), generate, find, findIndex, elemIndex, unsafeUpd, toList)
 import qualified Data.Ix as Ix
 import System.Random (getStdGen, randomRIO)
 import qualified System.Random.Shuffle as Random.Shuffle (shuffle')
+import Data.Maybe (isNothing, fromJust)
+import Data.List.Split (chunksOf)
+import Data.List (intercalate)
 
-type Array2D = Array Ipair Int
+type Vector2D = Vector Int
 data Grid = Grid {   
     gridSize :: Ipair,
     gridMoveCount :: Int,
-    gridArr :: Array2D
-} deriving Show
+    gridVec :: Vector2D
+} 
+    
+instance Show Grid where
+    show g = 
+        let (rows, cols) = gridSize g
+        in  printf "Grid %d" (gridMoveCount g) ++  -- Grid with move count
+            "\n" ++
+            unlines (map (unwords . map show) (chunksOf cols (toList (gridVec g)))) -- 2d vector
 
-size2D :: Array2D -> Ipair
-size2D inArr = snd (Array.bounds inArr) ~+ (1, 1)
-
-_genOrdered2DArray :: Ipair -> Array2D
-_genOrdered2DArray size = 
-    let (rows, cols) = size
-        values = [1..((rows * cols) - 1)] ++ [0] -- 0 is "empty"
-    in Array.listArray ((0, 0), (rows-1, cols-1)) values
-
+instance Eq Grid where 
+    (==) g1 g2 = gridVec g1 == gridVec g2
+             
+genOrdered2DVector :: Ipair -> Vector2D
+genOrdered2DVector bounds = 
+    let (rows, cols) = bounds
+        size = rows * cols
+    in generate (rows * cols) ( \i ->  if i == size - 1 then 0 else i + 1 )
+    
 grid :: Ipair -> Grid
 grid size =
-    let arr = _genOrdered2DArray size
+    let arr = genOrdered2DVector size
     in Grid {
         gridSize = size,
         gridMoveCount = 0,
-        gridArr = arr
+        gridVec = arr
     }
+
+-- Expand the 1D index to a 2D index
+expandIndex :: Grid -> Int -> Ipair
+expandIndex g i = 
+    let (rows, cols) = gridSize g
+    in (i `div` cols, i `mod` cols)
+
+-- Squash the 2D index to a 1D index
+squashIndex :: Grid -> Ipair -> Int
+squashIndex g (row, col) = 
+    let (rows, cols) = gridSize g
+    in row * cols + col
+
+-- Get the tile at the index (1D)
+getTile' :: Grid -> Int -> Int
+getTile' g i = gridVec g ! i
+    
+-- Get the tile at the 2D index
+getTile :: Grid -> Ipair -> Int
+getTile g (row, col) =  gridVec g ! squashIndex g (row, col)
     
 _countInversions :: [Int] -> Int
 _countInversions [] = 0
@@ -58,8 +88,8 @@ shuffle g = do
         (rows, cols) = size
     -- Randomize the permuation of all tiles except for blank (its fixed at the end)
     perm <- _genCorrectPermutation g
-    -- -2 because we will be moving it 2 more times before sending it out
-    let currentGrid = Grid size 0 (Array.listArray ((0, 0), (rows-1, cols-1)) (perm ++ [0]))
+    let perm' = perm ++ [0]
+        currentGrid = Grid size 0 (generate (rows * cols) (perm' !!)) 
     
     -- Randomize the starting blank
     randCol <- randomRIO (0, cols-1)
@@ -69,37 +99,25 @@ shuffle g = do
     let shuffledGrid = move (randRow, randCol) $ move (rows-1, randCol) currentGrid 
     pure $ shuffledGrid { gridMoveCount = 0 } -- Reset move count after shuffling
     
-_mappedPrinter :: Ipair -> Array2D -> Ipair -> IO ()
-_mappedPrinter size inArr index = do
-    let value = inArr!index
-        (_, cols) = size
-
-    if snd index == 0 then putStr "| "
-    else putStr " "
-
-    if value == 0 then putStr "  "
-    else printf "%2d" value
-    when (snd index == cols - 1) $ putStr "|\n"
-
-
-print2D :: Grid -> IO ()
-print2D g = do
-    let size = gridSize g 
-        inArr = gridArr g
-    mapM_ (_mappedPrinter size inArr) (Array.indices inArr)
-
+    
 -- getPos returns the position of the specified value.
 getPos :: Int -> Grid -> Ipair
-getPos val (Grid _ _ inArr) = fst $ head $ filter (\t -> snd t == val) (Array.assocs inArr)
+getPos val g = 
+    let vec = gridVec g
+        index = elemIndex val vec 
+        (rows, cols) = gridSize g
+    in maybe (error "Value not found")  (expandIndex g)  index
 
-getOriginalPos :: Int -> Grid -> Ipair
-getOriginalPos val g = 
+getOriginalPos :: Grid -> Int -> Ipair
+getOriginalPos g val = 
     let (rows, cols) = gridSize g
     in  if val == 0 then (rows - 1, cols - 1)
         else ((val - 1) `div` cols, (val - 1) `mod` cols)
     
 validPos :: Grid -> Ipair -> Bool
-validPos g = Ix.inRange $ Array.bounds $ gridArr g
+validPos (Grid (rows, cols) _ _) pos =   
+    let (row, col) = pos
+    in  row >= 0 && row < rows && col >= 0 && col < cols
 
 -- Checks whether or not the position will change the grid or not
 validMovePos :: Grid -> Ipair -> Bool
@@ -117,23 +135,24 @@ move movePos g =
         delta = movePos ~- blankPos
         (moveY, moveX) = movePos
         (blankY, blankX) = blankPos
-        (Grid _ gTotal inArr) = g
+        (Grid _ gTotal vec) = g
+        squashIndex' = squashIndex g
+        movePos' = squashIndex' movePos
         
         updates -- calculate the updates
             | not (validMovePos g movePos) = []
             | fst delta == 0 && snd delta <  0 -- move pos is left of blank space
-                = (movePos, 0): [((blankY, i), inArr!(blankY, i-1)) | i <- [(moveX+1)..blankX]]
+                = (movePos', 0): [(squashIndex' (blankY, i), vec ! squashIndex' (blankY, i-1)) | i <- [(moveX+1)..blankX]]
             | fst delta == 0 && snd delta >  0 -- move pos is right of blank space
-                = (movePos, 0): [((blankY, i), inArr!(blankY, i+1)) | i <- [blankX..(moveX-1)]]
+                = (movePos', 0): [(squashIndex' (blankY, i), vec ! squashIndex' (blankY, i+1)) | i <- [blankX..(moveX-1)]]
             | fst delta <  0 && snd delta == 0 -- move pos is above blank space
-                = (movePos, 0): [((i, blankX), inArr!(i-1, blankX)) | i <- [(moveY+1)..blankY]]
+                = (movePos', 0): [(squashIndex' (i, blankX), vec ! squashIndex' (i-1, blankX)) | i <- [(moveY+1)..blankY]]
             | fst delta >  0 && snd delta == 0  -- move pos is below blank space
-                = (movePos, 0): [((i, blankX), inArr!(i+1, blankX)) | i <- [blankY..(moveY-1)]]
+                = (movePos', 0): [(squashIndex' (i, blankX), vec ! squashIndex' (i+1, blankX)) | i <- [blankY..(moveY-1)]]
             | otherwise = error "Your logic is invalid dumbass"
         
-        updatedArr = inArr // updates
-    in  if updatedArr == inArr then g
-        else g { gridMoveCount = gTotal + 1, gridArr = updatedArr }
+    in  if null updates then g
+        else g { gridMoveCount = gTotal + 1, gridVec = unsafeUpd vec updates }
 
 getMovePosFromOffset :: Ipair -> Grid -> Ipair
 getMovePosFromOffset os g = getPos 0 g ~+ os
@@ -152,4 +171,4 @@ validOffsetPos g os =
         && (fst delta == 0 || snd delta == 0) -- Must be inline with an axis of the blank tile
 
 isSolved :: Grid -> Bool
-isSolved g = gridArr g == _genOrdered2DArray (gridSize g)
+isSolved g = gridVec g == genOrdered2DVector (gridSize g)

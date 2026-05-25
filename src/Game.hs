@@ -31,6 +31,7 @@ handleEvent (VtyEvent (V.EvKey (V.KChar c) [])) | c == 'q' = halt
                                                 | c == 'r' = Action.dispatch $ action Action.Reset
                                                 | c == ' ' = Action.dispatch $ action Action.Reset
                                                 | c == 'm' = Action.dispatch $ action Action.Menu
+                                                | c == 'h' = Action.dispatch $ action Action.Help
 handleEvent (VtyEvent (V.EvKey V.KUp []))                  = Action.dispatch $ action Action.Up
 handleEvent (VtyEvent (V.EvKey V.KLeft []))                = Action.dispatch $ action Action.Left
 handleEvent (VtyEvent (V.EvKey V.KDown []))                = Action.dispatch $ action Action.Down
