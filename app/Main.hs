@@ -14,6 +14,7 @@ import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (forever)
 import Data.Time.Clock (getCurrentTime)
 import Save (loadLeaderboard, Leaderboard (..))
+import qualified Data.Vector as V
 
 main :: IO ()   
 main = do
@@ -23,6 +24,12 @@ main = do
             settingsColorScheme = ColorScheme.fringe,
             settingsGridSize = (4, 4),
             settingsRowHover = 0
+        }
+        initialHelper = Helper {
+            helperGridVec = V.empty,
+            helperCurrentVecIdx = 0,
+            helperIsHelping = False,
+            helperLastRenderTime = Nothing
         }
         
     randomGrid <- shuffle $ grid $ settingsGridSize initialSettings
@@ -36,7 +43,8 @@ main = do
             playIsFinished = False,
             playTimerMs = 0,
             playLastTickTime = Nothing,
-            playLeaderboard = currentLeaderboard
+            playLeaderboard = currentLeaderboard,
+            playHelper = initialHelper
         }
         
     -- Init initial state

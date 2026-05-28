@@ -6,6 +6,7 @@ import ColorScheme (ColorScheme)
 
 import Data.Time.Clock (UTCTime)
 import Save (Leaderboard)
+import qualified Data.Vector as V
 
 data Scene = PlayScene | SettingsScene deriving (Show, Eq)
 data TileType = Fill | Border deriving (Show, Eq)
@@ -18,13 +19,21 @@ data SettingsState = SettingsState {
     settingsRowHover :: Int
 }
 
+data Helper = Helper {
+    helperGridVec :: V.Vector Grid,
+    helperCurrentVecIdx :: Int,
+    helperIsHelping :: Bool,
+    helperLastRenderTime :: Maybe UTCTime
+}
+
 data PlayState = PlayState {
     playGrid :: Grid,
     playIsRunning :: Bool,
     playIsFinished :: Bool,
     playTimerMs :: Int,
     playLastTickTime :: Maybe UTCTime,
-    playLeaderboard :: Leaderboard 
+    playLeaderboard :: Leaderboard,
+    playHelper :: Helper
 }
 
 data DebugState = DebugState {

@@ -40,21 +40,10 @@ linearConflict g =
                     ) (-1, 0) [0..rows-1]
                 ) [0..cols-1]
     in rowConflicts + colConflicts
-
-_getManhattanDistanceOfTile :: Grid -> Int -> Int -> Int
-_getManhattanDistanceOfTile grid index val =
-    if val == 0 then 0
-    else
-        let originalPos = Grid.getOriginalPos grid val
-            delta = originalPos ~- Grid.expandIndex grid index
-        in (abs . fst) delta + (abs . snd) delta
-
-manhattanDistance :: Grid -> Int
-manhattanDistance grid = VU.foldl' (+) 0 $ VU.imap (_getManhattanDistanceOfTile grid) (Grid.gridVec grid)
-
+    
 -- Manhattan distance + Linear Conflict 
 heuristic :: Grid -> Int
-heuristic grid = manhattanDistance grid + linearConflict grid
+heuristic grid = Grid.manhattanDistance grid + linearConflict grid
 
 getPossibleMoves :: Grid -> V.Vector Grid
 getPossibleMoves grid = V.map (`Grid.offset` grid) $ V.filter (Grid.validOffsetPos grid) $ V.fromList [(0, 1), (0, -1), (1, 0), (-1, 0)]

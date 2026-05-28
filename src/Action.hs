@@ -12,8 +12,10 @@ import Brick (EventM, modify, get, put, halt)
 import Control.Monad (when)
 import Scene.SettingsScene (getSettingValueByIndex, settingsIncrement, settingsDecrement, settingRows)
 import Save (loadLeaderboard, Leaderboard (..), storeLeaderboard, formatLeaderboardRankings)
-import Solver (idaStar, linearConflict, manhattanDistance)
+import Solver (idaStar, linearConflict)
 import Text.Printf (printf)
+import Config (_REFRESH_HELPER_MS)
+import qualified Data.Vector as V
 
 data ActionType = Left | Right | Up | Down | Point | Refresh | Menu | Help | Reset deriving (Eq, Show)
 
@@ -88,11 +90,23 @@ playSceneActionHandler a = do
         Action.Point -> checkBoardAndApplyMove gameState state $ actionPosition a
         Action.Menu  -> modify (\s -> s { gameScene = SettingsScene })
         Action.Help  -> do
-            let searchResult = idaStar oldGrid
-            error $ show searchResult
-            -- let linearConfH = linearConflict oldGrid
-            --     manhattanDistH = manhattanDistance oldGrid
-            -- modify(\s -> s { gameDebug = DebugState { debugStr = printf "Linear conflict: %d, Manhattan distance: %d\n" linearConfH manhattanDistH } })
+            let searchResult = idaStar oldGrid -- TODO: Consider putting this in a separate thread somehow
+            
+            if playIsFinished state then 
+                put gameState { gamePlay = state } 
+            else 
+                put gameState {  -- If they call the helper we consider the run invalid and don't save to leaderboards
+                    gamePlay = state {
+                        playIsRunning = False,
+                        playIsFinished = True,
+                        playHelper = Helper {
+                            helperGridVec = searchResult,
+                            helperCurrentVecIdx = 0,
+                            helperLastRenderTime = Nothing,
+                            helperIsHelping = True
+                        }
+                    }
+                } 
         
         Action.Reset -> do
             let newGridSize = settingsGridSize ss
@@ -104,18 +118,45 @@ playSceneActionHandler a = do
                 then liftIO $ loadLeaderboard newGridSize
                 else pure (playLeaderboard state)
                 
-            modify (\s -> s {
+            put gameState {
                 gamePlay = state { 
                     playGrid = newGrid,
                     playIsRunning = False,
                     playIsFinished = False,
                     playLastTickTime = Nothing,
                     playTimerMs = 0,
-                    playLeaderboard = newLeaderboard
+                    playLeaderboard = newLeaderboard,
+                    playHelper = Helper {
+                        helperGridVec = V.empty,
+                        helperCurrentVecIdx = 0,
+                        helperLastRenderTime = Nothing,
+                        helperIsHelping = False
+                    }
                 }
-            })
+            }
         
-        Action.Refresh -> put gameState { gamePlay = state } -- Force UI refresh
+        Action.Refresh -> do 
+            let incrementHelper = case (helperLastRenderTime . playHelper) state of
+                    Nothing -> True
+                    Just lastHelperTime -> 
+                        let diffSeconds = realToFrac (diffUTCTime time lastHelperTime)
+                            diffMs = round (diffSeconds * 1000)
+                        in diffMs >= _REFRESH_HELPER_MS
+                
+            if incrementHelper && (helperIsHelping . playHelper) state then do -- Show the next solver path.
+                let helper = playHelper state
+                    newIdx = helperCurrentVecIdx helper + 1
+                put gameState { 
+                        gamePlay = state {
+                            playGrid = helperGridVec helper V.! newIdx,
+                            playHelper = helper {
+                                helperCurrentVecIdx = newIdx,
+                                helperLastRenderTime = Just time,
+                                helperIsHelping = newIdx + 1 < V.length (helperGridVec helper)
+                            }
+                        }
+                    }
+            else put gameState { gamePlay = state } -- Force UI refresh
 
 settingsSceneActionHandler :: Action -> EventM UI.WidgetName GameState ()
 settingsSceneActionHandler a = do

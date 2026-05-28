@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-} 
 module Grid where
 
 import Ipair (Ipair, (~-), (~+))
@@ -12,122 +11,125 @@ import qualified System.Random.Shuffle as Random.Shuffle (shuffle')
 import Data.Maybe (isNothing, fromJust)
 import Data.List.Split (chunksOf)
 import Data.List (intercalate)
+import qualified Data.Vector.Unboxed as VU
 
 type Vector2D = Vector Int
-data Grid = Grid {   
+data Grid = Grid {
     gridSize :: Ipair,
     gridMoveCount :: Int,
-    gridVec :: Vector2D
-} 
-    
+    gridVec :: Vector2D,
+    gridMDCache :: Int -- Cached value of Manhattan Distance to reduce runtime
+}
+
 instance Show Grid where
-    show g = 
+    show g =
         let (rows, cols) = gridSize g
         in  printf "Grid %d" (gridMoveCount g) ++  -- Grid with move count
             "\n" ++
             unlines (map (unwords . map show) (chunksOf cols (toList (gridVec g)))) -- 2d vector
 
-instance Eq Grid where 
-    (==) g1 g2 = gridVec g1 == gridVec g2
-             
+instance Eq Grid where
+    (==) g1 g2 = gridMDCache g1 == gridMDCache g2 && gridVec g1 == gridVec g2
+
 genOrdered2DVector :: Ipair -> Vector2D
-genOrdered2DVector bounds = 
+genOrdered2DVector bounds =
     let (rows, cols) = bounds
         size = rows * cols
     in generate (rows * cols) ( \i ->  if i == size - 1 then 0 else i + 1 )
-    
+
 grid :: Ipair -> Grid
 grid size =
     let arr = genOrdered2DVector size
     in Grid {
         gridSize = size,
         gridMoveCount = 0,
-        gridVec = arr
+        gridVec = arr,
+        gridMDCache = 0
     }
 
 -- Expand the 1D index to a 2D index
 expandIndex :: Grid -> Int -> Ipair
-expandIndex g i = 
+expandIndex g i =
     let (rows, cols) = gridSize g
     in (i `div` cols, i `mod` cols)
 
 -- Squash the 2D index to a 1D index
 squashIndex :: Grid -> Ipair -> Int
-squashIndex g (row, col) = 
+squashIndex g (row, col) =
     let (rows, cols) = gridSize g
     in row * cols + col
 
 -- Get the tile at the index (1D)
 getTile' :: Grid -> Int -> Int
 getTile' g i = gridVec g ! i
-    
+
 -- Get the tile at the 2D index
 getTile :: Grid -> Ipair -> Int
 getTile g (row, col) =  gridVec g ! squashIndex g (row, col)
-    
+
 _countInversions :: [Int] -> Int
 _countInversions [] = 0
-_countInversions list = 
-    let (x:xs) = list 
+_countInversions list =
+    let (x:xs) = list
     in length (filter (< x) xs) + _countInversions xs
-    
+
 _makeEven :: [Int] -> [Int]
 _makeEven (x:y:xs) = y:x:xs
 _makeEven _ = error "Could not make permutation even"
 
 _genCorrectPermutation :: Grid -> IO [Int]
-_genCorrectPermutation g = do 
+_genCorrectPermutation g = do
     let (rows, cols) = gridSize g
     perm <- Random.Shuffle.shuffle' [1..(rows*cols - 1)] (rows * cols - 1) <$> getStdGen -- This linter really be suggesting sum bull shit
     if even (_countInversions perm) then pure perm
     else pure (_makeEven perm)
-    
+
 shuffle :: Grid -> IO Grid
 shuffle g = do
-    let size = gridSize g 
+    let size = gridSize g
         (rows, cols) = size
     -- Randomize the permuation of all tiles except for blank (its fixed at the end)
     perm <- _genCorrectPermutation g
     let perm' = perm ++ [0]
-        currentGrid = Grid size 0 (generate (rows * cols) (perm' !!)) 
-    
+        currentGrid = Grid size 0 (generate (rows * cols) (perm' !!)) 0
+
     -- Randomize the starting blank
     randCol <- randomRIO (0, cols-1)
     randRow <- randomRIO (0, rows-1)
-    
+
     -- Move cols then rows
-    let shuffledGrid = move (randRow, randCol) $ move (rows-1, randCol) currentGrid 
-    pure $ shuffledGrid { gridMoveCount = 0 } -- Reset move count after shuffling
-    
-    
+    let shuffledGrid = move (randRow, randCol) $ move (rows-1, randCol) currentGrid
+    pure $ shuffledGrid { gridMoveCount = 0, gridMDCache = manhattanDistance shuffledGrid } -- Reset move count after shuffling
+
+
 -- getPos returns the position of the specified value.
 getPos :: Int -> Grid -> Ipair
-getPos val g = 
+getPos val g =
     let vec = gridVec g
-        index = elemIndex val vec 
+        index = elemIndex val vec
         (rows, cols) = gridSize g
     in maybe (error "Value not found")  (expandIndex g)  index
 
 getOriginalPos :: Grid -> Int -> Ipair
-getOriginalPos g val = 
+getOriginalPos g val =
     let (rows, cols) = gridSize g
     in  if val == 0 then (rows - 1, cols - 1)
         else ((val - 1) `div` cols, (val - 1) `mod` cols)
-    
+
 validPos :: Grid -> Ipair -> Bool
-validPos (Grid (rows, cols) _ _) pos =   
+validPos (Grid (rows, cols) _ _ _) pos =
     let (row, col) = pos
     in  row >= 0 && row < rows && col >= 0 && col < cols
 
 -- Checks whether or not the position will change the grid or not
 validMovePos :: Grid -> Ipair -> Bool
-validMovePos g movePos = 
+validMovePos g movePos =
     let blankPos = getPos 0 g
         delta = movePos ~- blankPos
     in  validPos g movePos -- Must be inside the possible index
         && delta /= (0, 0) -- Not the blank position
         && (fst delta == 0 || snd delta == 0) -- Must be inline with an axis of the blank tile
-    
+
 -- Move a tile with the pos of Ipair
 move :: Ipair -> Grid -> Grid
 move movePos g =
@@ -135,10 +137,10 @@ move movePos g =
         delta = movePos ~- blankPos
         (moveY, moveX) = movePos
         (blankY, blankX) = blankPos
-        (Grid _ gTotal vec) = g
+        (Grid _ gTotal vec _) = g
         squashIndex' = squashIndex g
         movePos' = squashIndex' movePos
-        
+
         updates -- calculate the updates
             | not (validMovePos g movePos) = []
             | fst delta == 0 && snd delta <  0 -- move pos is left of blank space
@@ -150,9 +152,15 @@ move movePos g =
             | fst delta >  0 && snd delta == 0  -- move pos is below blank space
                 = (movePos', 0): [(squashIndex' (i, blankX), vec ! squashIndex' (i+1, blankX)) | i <- [blankY..(moveY-1)]]
             | otherwise = error "Your logic is invalid dumbass"
-        
+
     in  if null updates then g
-        else g { gridMoveCount = gTotal + 1, gridVec = unsafeUpd vec updates }
+        else g {
+            gridMoveCount = gTotal + 1,
+            gridVec = unsafeUpd vec updates,
+            gridMDCache = gridMDCache g -- The current cache
+                          - sum (map (\(index, _) -> getManhattanDistanceOfTile g index (getTile' g index)) updates) -- Minus the old changed tiles
+                          + sum (map (uncurry (getManhattanDistanceOfTile g)) updates) -- Plus the new changed tiles
+        }
 
 getMovePosFromOffset :: Ipair -> Grid -> Ipair
 getMovePosFromOffset os g = getPos 0 g ~+ os
@@ -171,4 +179,15 @@ validOffsetPos g os =
         && (fst delta == 0 || snd delta == 0) -- Must be inline with an axis of the blank tile
 
 isSolved :: Grid -> Bool
-isSolved g = gridVec g == genOrdered2DVector (gridSize g)
+isSolved g = gridMDCache g == 0
+
+getManhattanDistanceOfTile :: Grid -> Int -> Int -> Int
+getManhattanDistanceOfTile grid index val =
+    if val == 0 then 0
+    else
+        let originalPos = Grid.getOriginalPos grid val
+            delta = originalPos ~- Grid.expandIndex grid index
+        in (abs . fst) delta + (abs . snd) delta
+
+manhattanDistance :: Grid -> Int
+manhattanDistance grid = VU.foldl' (+) 0 $ VU.imap (getManhattanDistanceOfTile grid) (Grid.gridVec grid)
