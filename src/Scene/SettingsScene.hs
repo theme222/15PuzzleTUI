@@ -2,7 +2,8 @@
 module Scene.SettingsScene where
 
 import UI (WN)
-import State (GameState (..), SettingsState (..), TileType (..))
+import State (GameState (..), SettingsState (..))
+import Save (TileType (..), Settings (..))
 
 import Data.List.Index (imap)
 import Brick
@@ -10,9 +11,10 @@ import Brick.Widgets.Center (center, hCenter)
 import Brick.Widgets.Border
 import ColorScheme (ColorScheme (..), fringe, row, col)
 import qualified Graphics.Vty as V
+import qualified Data.Ord as Ord 
 
--- Each row has a label, a getter and a function to update the state
-data SettingValue = VInt Int | VColorScheme ColorScheme | VTileType TileType
+-- Each row has a label, a getter and setter 
+data SettingValue = VInt Int | VHz Int | VColorScheme ColorScheme | VTileType TileType
 type SettingRow = (String, SettingsState -> SettingValue, SettingsState -> SettingValue -> SettingsState)
 
 -- Takes the state and checks if the current row is the selected row, applying a highlight if so
@@ -24,6 +26,7 @@ _applyHighlightIfOnRow state rowNum w = let selectedRow = settingsRowHover state
 
 settingsIncrement :: SettingValue -> SettingValue
 settingsIncrement (VInt v) = VInt (v + 1)
+settingsIncrement (VHz v) = VHz (Ord.clamp (15, 240) (v * 2))
 -- Color scheme enum
 settingsIncrement (VColorScheme (ColorScheme name _)) | name == "fringe" = VColorScheme row
                                             | name == "row" = VColorScheme col
@@ -37,21 +40,15 @@ settingsDecrement :: SettingValue -> SettingValue
 -- Num can't be less than 2
 settingsDecrement (VInt 2) = VInt 2
 settingsDecrement (VInt v) = VInt (v - 1)
+settingsDecrement (VHz v) = VHz (Ord.clamp (15, 240) (v `div` 2))
 -- Color scheme enum
 settingsDecrement (VColorScheme (ColorScheme name _)) | name == "fringe" = VColorScheme col
+                                            | name == "col" = VColorScheme row
                                             | name == "row" = VColorScheme fringe
-                                            | name == "col" = VColorScheme fringe
 -- Tile type enum
 settingsDecrement (VTileType v) | v == Fill = VTileType Border
                                 | v == Border = VTileType Fill
 settingsDecrement v = v
-
-getSettingValueByIndex :: Int -> SettingsState -> SettingValue
-getSettingValueByIndex 0 ss = VInt (fst (settingsGridSize ss))
-getSettingValueByIndex 1 ss = VInt (snd (settingsGridSize ss))
-getSettingValueByIndex 2 ss = VColorScheme (settingsColorScheme ss)
-getSettingValueByIndex 3 ss = VTileType (settingsTileType ss)
-getSettingValueByIndex _ _ = error "Invalid setting index"
 
 settingRows :: [SettingRow]
 settingRows = [ -- I just gotta say haskell gotta be the most unsightreadable language I've ever used
@@ -70,11 +67,16 @@ settingRows = [ -- I just gotta say haskell gotta be the most unsightreadable la
         ("Tile Type", VTileType . settingsTileType, \s -> \case
             (VTileType v) -> s { settingsTileType = v }
             _ -> s
+        ), -- Enum
+        ("Refresh Rate", VHz . settingsRefreshRate, \s -> \case 
+            (VHz v) -> s { settingsRefreshRate = v } 
+            _ -> s
         ) -- Enum
     ]
     
 _drawSettingValue :: SettingValue -> Widget WN
 _drawSettingValue (VInt v) = str $ "- " ++ show v ++ " +"
+_drawSettingValue (VHz v) = str $ "- " ++ show v ++ " +"
 _drawSettingValue (VColorScheme cs) = str $ "← " ++ show cs ++  " →" 
 _drawSettingValue (VTileType tt) = str $ "← " ++ show tt ++ " →" 
 

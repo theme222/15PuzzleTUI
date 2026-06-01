@@ -13,29 +13,25 @@ import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (forever)
 import Data.Time.Clock (getCurrentTime)
-import Save (loadLeaderboard, Leaderboard (..))
+import Save (loadLeaderboard, Leaderboard (..), Settings (..), TileType (..), loadSettings)
 import qualified Data.Vector as V
 
 main :: IO ()   
 main = do
     -- Init settings
-    let initialSettings = SettingsState {
-            settingsTileType = Fill,
-            settingsColorScheme = ColorScheme.fringe,
-            settingsGridSize = (4, 4),
-            settingsRowHover = 0
-        }
-        initialHelper = Helper {
+    let initialHelper = Helper {
             helperGridVec = V.empty,
             helperCurrentVecIdx = 0,
             helperIsHelping = False,
             helperLastRenderTime = Nothing
         }
+
+    currentSettings <- loadSettings        
         
-    randomGrid <- shuffle $ grid $ settingsGridSize initialSettings
+    randomGrid <- shuffle $ grid $ settingsGridSize currentSettings
 
     -- load leaderboard
-    currentLeaderboard <- loadLeaderboard (settingsGridSize initialSettings)
+    currentLeaderboard <- loadLeaderboard (settingsGridSize currentSettings)
     
     let initialPlay = PlayState {
             playGrid = randomGrid,
@@ -50,7 +46,7 @@ main = do
     -- Init initial state
     let initialState = State.GameState { 
             gameScene = PlayScene,
-            gameSettings = initialSettings,
+            gameSettings = currentSettings,
             gamePlay = initialPlay,
             gameDebug = DebugState { debugStr = "" }
         }
@@ -59,7 +55,7 @@ main = do
     timerUpdateChannel <- newBChan 10
     
     _ <- forkIO $ forever $ do
-        threadDelay $ Config._REFRESH_RATE_MS * 1000
+        threadDelay $ round (Config._REFRESH_RATE_MS * 1000.0)
         now <- getCurrentTime
         writeBChan timerUpdateChannel (Tick now) 
     
