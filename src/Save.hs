@@ -50,7 +50,13 @@ storeLeaderboard leaderboard = do
     path <- leaderboardPath (leaderboardSize leaderboard)
     writeFile path (unlines $ map show (leaderboardRankings leaderboard))
 
-data TileType = Fill | Border deriving (Show, Eq)
+data TileType = Fill | Border | Invisible deriving (Eq)
+
+instance Show TileType where
+    show Fill = "fill"
+    show Border = "border"
+    show Invisible = "invisible"
+
 data Settings = Settings {
     settingsTileType :: TileType,
     settingsColorScheme :: ColorScheme, -- Pass through both the value and the position (just in case tho idk)
@@ -62,9 +68,11 @@ data Settings = Settings {
 instance ToJSON TileType where
     toJSON Fill = AT.String "fill"
     toJSON Border = AT.String "border"
+    toJSON Invisible = AT.String "invisible"
 instance FromJSON TileType where
     parseJSON (AT.String "fill") = pure Fill
     parseJSON (AT.String "border") = pure Border
+    parseJSON (AT.String "invisible") = pure Invisible
     parseJSON _ = fail "Invalid tile type"
 
 instance ToJSON ColorScheme where

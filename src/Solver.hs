@@ -8,7 +8,8 @@ import Ipair
     
 -- Manhattan distance + Linear Conflict 
 heuristic :: Grid -> Int
-heuristic grid = Grid.gridMDCache grid + Grid.gridLCCache grid
+heuristic grid = Grid.gridMDCache grid + Grid.linearConflict grid
+-- heuristic grid = Grid.gridMDCache grid + Grid.gridLCCache grid
 
 getPossibleMoves :: Grid -> V.Vector Grid
 getPossibleMoves grid = V.map (`Grid.offset` grid) $ V.filter (Grid.validOffsetPos grid) $ V.fromList [(0, 1), (0, -1), (1, 0), (-1, 0)]
@@ -34,7 +35,7 @@ _idaStarLoop path bound =
 idaStar :: Grid -> V.Vector Grid
 idaStar grid = 
     let path = V.singleton grid
-    in  _idaStarLoop path (heuristic grid)
+    in  _idaStarLoop path (Grid.gridMoveCount grid + heuristic grid)
 
 
 

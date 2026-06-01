@@ -41,8 +41,7 @@ handleEvent (VtyEvent (V.EvKey V.KRight []))               = Action.dispatch $ a
 handleEvent (MouseDown (UI.Tilename pos) V.BLeft _ _)      = Action.dispatch $ Action Action.Point pos
 ---- Mouse events ----
 ---- Custom event ----
-handleEvent (AppEvent (Tick _)) = Action.dispatch $ action Action.Refresh
-
+handleEvent (AppEvent (Tick _))                            = Action.dispatch $ action Action.Refresh
 ---- Custom event ----
 handleEvent _                                              = return () -- Ignore all other keys
 

@@ -12,14 +12,15 @@ import Data.Maybe (isNothing, fromJust)
 import Data.List.Split (chunksOf)
 import Data.List (intercalate)
 import qualified Data.Vector.Unboxed as VU
+import Data.Foldable (Foldable(foldl'))
 
 type Vector2D = Vector Int
 data Grid = Grid {
     gridSize :: Ipair,
     gridMoveCount :: Int,
     gridVec :: Vector2D,
-    gridMDCache :: Int, -- Cached value of Manhattan Distance to reduce runtime
-    gridLCCache :: Int
+    gridMDCache :: Int -- Cached value of Manhattan Distance to reduce runtime
+    -- gridLCCache :: Int
 }
 
 instance Show Grid where
@@ -31,7 +32,7 @@ instance Show Grid where
             unlines (map (unwords . map show) (chunksOf cols (toList (gridVec g)))) -- 2d vector
 
 instance Eq Grid where
-    (==) g1 g2 = gridMDCache g1 == gridMDCache g2 && gridLCCache g1 == gridLCCache g2 && gridVec g1 == gridVec g2
+    (==) g1 g2 = gridMDCache g1 == gridMDCache g2 && gridVec g1 == gridVec g2
 
 genOrdered2DVector :: Ipair -> Vector2D
 genOrdered2DVector bounds =
@@ -46,8 +47,8 @@ grid size =
         gridSize = size,
         gridMoveCount = 0,
         gridVec = arr,
-        gridMDCache = 0,
-        gridLCCache = 0
+        gridMDCache = 0
+        -- gridLCCache = 0
     }
 
 -- Expand the 1D index to a 2D index
@@ -94,7 +95,7 @@ shuffle g = do
     -- Randomize the permuation of all tiles except for blank (its fixed at the end)
     perm <- _genCorrectPermutation g
     let perm' = perm ++ [0]
-        currentGrid = Grid size 0 (generate (rows * cols) (perm' !!)) 0 0
+        currentGrid = Grid size 0 (generate (rows * cols) (perm' !!)) 0 
 
     -- Randomize the starting blank
     randCol <- randomRIO (0, cols-1)
@@ -102,7 +103,11 @@ shuffle g = do
 
     -- Move cols then rows
     let shuffledGrid = move (randRow, randCol) $ move (rows-1, randCol) currentGrid
-    pure $ shuffledGrid { gridMoveCount = 0, gridMDCache = manhattanDistance shuffledGrid, gridLCCache = linearConflict shuffledGrid } -- Reset move count after shuffling
+    pure $ shuffledGrid { 
+        gridMoveCount = 0, 
+        gridMDCache = manhattanDistance shuffledGrid
+        -- gridLCCache = linearConflict shuffledGrid 
+    } -- Reset move count after shuffling
 
 
 -- getPos returns the position of the specified value.
@@ -120,7 +125,7 @@ getOriginalPos g val =
         else ((val - 1) `div` cols, (val - 1) `mod` cols)
 
 validPos :: Grid -> Ipair -> Bool
-validPos (Grid (rows, cols) _ _ _ _) pos =
+validPos (Grid (rows, cols) _ _ _)  pos =
     let (row, col) = pos
     in  row >= 0 && row < rows && col >= 0 && col < cols
 
@@ -153,7 +158,7 @@ move movePos g =
         delta = movePos ~- blankPos
         (moveY, moveX) = movePos
         (blankY, blankX) = blankPos
-        (Grid _ gTotal vec _ _) = g
+        (Grid _ gTotal vec _) = g
         squashIndex' = squashIndex g
         movePos' = squashIndex' movePos
 
@@ -169,42 +174,39 @@ move movePos g =
                 = (movePos', 0): [(squashIndex' (i, blankX), vec ! squashIndex' (i+1, blankX)) | i <- [blankY..(moveY-1)]]
             | otherwise = error "Your logic is invalid dumbass"
 
-        newGrid = g { gridVec = unsafeUpd vec updates }
 
     in  if null updates then g
-        else newGrid {
+        else g {
             gridMoveCount = gTotal + 1,
+            gridVec = unsafeUpd vec updates,
             gridMDCache = gridMDCache g -- The current cache
                           - sum (map (\(index, _) -> getManhattanDistanceOfTile g index (getTile' g index)) updates) -- Minus the old changed tiles
-                          + sum (map (uncurry (getManhattanDistanceOfTile g)) updates), -- Plus the new changed tiles
-            gridLCCache =
-                let changedRows = map (getIntersectingRow g . expandIndex g . fst) updates
-                    changedCols = map (getIntersectingCol g . expandIndex g . fst) updates
-                    (rows, cols) = gridSize g
-                    getRowLC currentGrid = sum $
-                        map (snd . foldl (\msg (currentRow, currentCol) ->
-                                _conflictReducer currentGrid
-                                    (\val -> (val - 1) `div` cols == currentRow)
-                                    msg
-                                    (currentRow, currentCol)
-                                ) (-1, 0)
-                            ) changedRows
-                    getColLC currentGrid = sum $
-                        map (snd . foldl (\msg (currentRow, currentCol) ->
-                                _conflictReducer currentGrid
-                                    (\val -> (val - 1) `mod` cols == currentCol)
-                                    msg
-                                    (currentRow, currentCol)
-                                ) (-1, 0)
-                            ) changedCols
-                    prevRowLC = getRowLC g
-                    newRowLC  = getRowLC newGrid
-                    prevColLC = getColLC g
-                    newColLC  = getColLC newGrid
+                          + sum (map (uncurry (getManhattanDistanceOfTile g)) updates) -- Plus the new changed tiles
+            -- gridLCCache =
+            --     let changedRows = map (getIntersectingRow g . expandIndex g . fst) updates
+            --         changedCols = map (getIntersectingCol g . expandIndex g . fst) updates
+            --         (rows, cols) = gridSize g
+            --         newGrid = g { gridVec = unsafeUpd vec updates }
+            --         getRowLC currentGrid = sum $
+            --             map (snd . foldl' (\msg (currentRow, currentCol) ->
+            --                     _conflictReducer currentGrid
+            --                         (\val -> (val - 1) `div` cols == currentRow)
+            --                         msg
+            --                         (currentRow, currentCol)
+            --                     ) (-1, 0)
+            --                 ) changedRows
+            --         getColLC currentGrid = sum $
+            --             map (snd . foldl' (\msg (currentRow, currentCol) ->
+            --                     _conflictReducer currentGrid
+            --                         (\val -> (val - 1) `mod` cols == currentCol)
+            --                         msg
+            --                         (currentRow, currentCol)
+            --                     ) (-1, 0)
+            --                 ) changedCols
                     
-                in gridLCCache g -- The current cache
-                    + newRowLC - prevRowLC
-                    + newColLC - prevColLC
+            --     in gridLCCache g -- The current cache
+            --         + getRowLC newGrid - getRowLC g
+            --         + getColLC newGrid - getColLC g
                     
         }
 
@@ -255,7 +257,7 @@ linearConflict g =
     let (rows, cols) = Grid.gridSize g
         _conflictReducer' = _conflictReducer g
         rowConflicts = sum $
-            map (\currentRow -> snd $ foldl (\msg currentCol ->
+            map (\currentRow -> snd $ foldl' (\msg currentCol ->
                     _conflictReducer'
                         (\val -> (val - 1) `div` cols == currentRow)
                         msg
@@ -264,7 +266,7 @@ linearConflict g =
                 ) [0..rows-1]
 
         colConflicts = sum $
-            map (\currentCol -> snd $ foldl (\msg currentRow ->
+            map (\currentCol -> snd $ foldl' (\msg currentRow ->
                     _conflictReducer'
                         (\val -> (val - 1) `mod` cols == currentCol)
                         msg

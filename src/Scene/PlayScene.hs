@@ -2,8 +2,8 @@ module Scene.PlayScene where
 
 import qualified Grid
 import Ipair
-import UI (WN, WidgetName (..))
-import ColorScheme (ColorGetter, applyCGAsFg, applyCGAsBg, ColorScheme (..))
+import UI (WN, WidgetName (..), bold, colorFG, def, applyAttr, colorBoth, colorBG, italic)
+import ColorScheme (ColorGetter, ColorScheme (..), applyCGAsBg, applyCGAsFg)
 import State (GameState(..), PlayState(..), SettingsState(..), DebugState (..))
 import Save ( TileType(..), Leaderboard(..), Settings (..) )
 
@@ -30,11 +30,9 @@ _standardizeText "0" = " " -- Also make 0 blank
 _standardizeText text = if odd $ length text then text else intersperse ' ' text
 
 _applyInlineStyle :: TileType -> ColorGetter -> Int -> Widget WN -> Widget WN
-_applyInlineStyle Fill cg val = modifyDefAttr (\_ -> applyCGAsBg cg val)
-_applyInlineStyle Border cg val = modifyDefAttr (\_ -> applyCGAsFg cg val)
-
-_applyTileType :: TileType -> Widget WN -> Widget WN
-_applyTileType tt w = if tt == Border then withBorderStyle unicodeBold $ border w else w
+_applyInlineStyle Fill cg val = bold . colorFG V.brightWhite . applyCGAsBg cg val
+_applyInlineStyle Border cg val = bold . withBorderStyle unicodeBold . applyCGAsFg cg val . border . colorFG V.brightWhite -- Center white border colored
+_applyInlineStyle Invisible cg val = bold . applyCGAsFg cg val
 
 _applyPadding :: TileType -> Int -> Widget WN -> Widget WN
 _applyPadding tt len w =
@@ -52,7 +50,7 @@ numberTileUI state pos =
         tt = settingsTileType (gameSettings state)
     in clickable
         (Tilename pos)
-            ( _applyInlineStyle tt cg val $ _applyTileType tt $ _applyPadding tt (length display) $ str display)
+            ( _applyInlineStyle tt cg val $ _applyPadding tt (length display) $ str display)
 
 -- recursively build the columns
 _genGridColUI :: GameState -> Ipair -> Widget WN
@@ -88,34 +86,38 @@ gameStatUI state =
         moveCount = (Grid.gridMoveCount . playGrid . gamePlay) state
 
         timeStr = getFormattedTime totalMs
-    in border $ str ("Current Time: " ++ timeStr ++ " Current moves: " ++ show moveCount)
-
-_inlineControlStyle :: Widget WN -> Widget WN
-_inlineControlStyle = modifyDefAttr (\_ -> fg V.red)
+    in border $ str ("Current Time: " ++ timeStr ++ " Current Moves: " ++ show moveCount)
 
 controlsUI :: Widget WN
-controlsUI = border $ padLeftRight 4 $ padTopBottom 1 $ hLimit 23 $ modifyDefAttr (`V.withStyle` V.bold) (
+controlsUI = 
+    let _red = def . colorFG V.red 
+    in border $ padLeftRight 4 $ padTopBottom 1 $ hLimit 23 $ bold (
         (hCenter (str "Controls") <=> str " ") <=>
-        (str "Move up:    " <+> _inlineControlStyle (str "w, ⬆")) <=>
-        (str "Move down:  " <+> _inlineControlStyle (str "s, ⬇")) <=>
-        (str "Move left:  " <+> _inlineControlStyle (str "a, ⬅")) <=>
-        (str "Move right: " <+> _inlineControlStyle (str "d, ➡")) <=>
-        (str "Reset:      " <+> _inlineControlStyle (str "r, <space>")) <=>
-        (str "Settings:   " <+> _inlineControlStyle (str "m")) <=>
-        (str "Help:       " <+> _inlineControlStyle (str "h")) <=>
-        (str "Quit:       " <+> _inlineControlStyle (str "q"))
+        (str "Move up:    " <+> _red (str "w, ⬆")) <=>
+        (str "Move left:  " <+> _red (str "a, ⬅")) <=>
+        (str "Move down:  " <+> _red (str "s, ⬇")) <=>
+        (str "Move right: " <+> _red (str "d, ➡")) <=>
+        (str "Reset:      " <+> _red (str "r, <space>")) <=>
+        (str "Settings:   " <+> _red (str "m")) <=>
+        (str "Help:       " <+> _red (str "h")) <=>
+        (str "Quit:       " <+> _red (str "q"))
     )
 
 _formatLeaderboardPos :: Int -> Int -> Widget WN
 _formatLeaderboardPos index item =
-    str (show (index + 1) ++ ". " ++ getFormattedTime item)
+    let rankingColor | index == 0 = V.rgbColor 222 185 65   -- Gold
+                      | index == 1 = V.rgbColor 192 192 192 -- Silver
+                      | index == 2 = V.rgbColor 205 127 50  -- Bronze
+                      | otherwise  = V.white
+                      
+    in colorFG rankingColor $ (bold . str) (show (index + 1) ++ ". ") <+> str (getFormattedTime item)
 
 leaderboardUI :: GameState -> Widget WN
 leaderboardUI state =
     let leaderboard = (playLeaderboard . gamePlay) state
         leaderboardEntries = vBox $ imap _formatLeaderboardPos (leaderboardRankings leaderboard)
     in  border $ padLeftRight 4 $ padTopBottom 1 $ hLimit 23 $
-        hCenter (str ("Fastest Times For " ++ show (leaderboardSize leaderboard)) <=> str " ") <=> leaderboardEntries
+        (hCenter . bold) (str "Leaderboard " <+> italic (str ((show . leaderboardSize) leaderboard)) <=> str " ") <=> leaderboardEntries
 
 debugUI :: GameState -> Widget WN
 debugUI state = str $ (debugStr . gameDebug) state

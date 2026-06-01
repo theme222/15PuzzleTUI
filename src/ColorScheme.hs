@@ -5,6 +5,7 @@ import qualified Grid
 
 import qualified Graphics.Vty as V
 import Brick
+import UI
 
 data ColorScheme = ColorScheme {
     colorSchemeName :: String,
@@ -84,10 +85,10 @@ col = ColorScheme "col"
         in colorMap !! valCol
     )
 
-applyCGAsFg :: ColorGetter -> Int -> V.Attr
-applyCGAsFg _ 0 = V.defAttr 
-applyCGAsFg cg val = V.withStyle (fg $ cg val) V.bold
+applyCGAsFg :: ColorGetter -> Int -> Widget WN -> Widget WN
+applyCGAsFg _ 0 = def
+applyCGAsFg cg val = colorFG (cg val)
 
-applyCGAsBg :: ColorGetter -> Int -> V.Attr
-applyCGAsBg _ 0 = V.defAttr 
-applyCGAsBg cg val = V.withStyle (bg $ cg val) V.bold
+applyCGAsBg :: ColorGetter -> Int -> Widget WN -> Widget WN
+applyCGAsBg _ 0 = def
+applyCGAsBg cg val = colorBG (cg val)
