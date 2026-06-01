@@ -12,7 +12,7 @@ import Brick (EventM, modify, get, put, halt, continueWithoutRedraw)
 import Control.Monad (when)
 import Scene.SettingsScene (settingsIncrement, settingsDecrement, settingRows)
 import Save (loadLeaderboard, Leaderboard (..), storeLeaderboard, formatLeaderboardRankings, Settings (..), storeSettings)
-import Solver (idaStar, linearConflict)
+import Solver (idaStar)
 import Text.Printf (printf)
 import Config (_REFRESH_HELPER_MS)
 import qualified Data.Vector as V
