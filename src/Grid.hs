@@ -13,6 +13,7 @@ import Data.List.Split (chunksOf)
 import Data.List (intercalate)
 import qualified Data.Vector.Unboxed as VU
 import Data.Foldable (Foldable(foldl'))
+import qualified Data.Vector as V
 
 type Vector2D = Vector Int
 data Grid = Grid {
@@ -48,6 +49,15 @@ grid size =
         gridMoveCount = 0,
         gridVec = arr,
         gridMDCache = 0
+        -- gridLCCache = 0
+    }
+
+nullGrid :: Grid
+nullGrid = Grid {
+        gridSize = (0, 0),
+        gridMoveCount = 0,
+        gridVec = VU.empty,
+        gridMDCache = -1 -- This is simply for the Eq instance check.
         -- gridLCCache = 0
     }
 
@@ -124,6 +134,9 @@ getOriginalPos g val =
     in  if val == 0 then (rows - 1, cols - 1)
         else ((val - 1) `div` cols, (val - 1) `mod` cols)
 
+getOriginalTile :: Grid -> Ipair -> Int
+getOriginalTile g pos = squashIndex g pos + 1
+
 validPos :: Grid -> Ipair -> Bool
 validPos (Grid (rows, cols) _ _ _)  pos =
     let (row, col) = pos
@@ -149,7 +162,6 @@ getIntersectingCol g pos =
     let (rows, cols) = gridSize g
         (currentRow, currentCol) = pos
     in  [(currentRow, col) | col <- [0..cols-1]]
-
 
 -- Move a tile with the pos of Ipair
 move :: Ipair -> Grid -> Grid
@@ -216,6 +228,18 @@ getMovePosFromOffset os g = getPos 0 g ~+ os
 -- move a block offsetted from the blank tile by Ipair
 offset :: Ipair -> Grid -> Grid
 offset movePos g = move (getMovePosFromOffset movePos g) g
+
+_applyOffsetsRec :: V.Vector Grid -> V.Vector Ipair -> Int -> V.Vector Grid
+_applyOffsetsRec gridList offsets index 
+    | index == V.length offsets = gridList 
+    | otherwise = 
+    let currentGrid = V.last gridList
+        currentOffset = V.unsafeIndex offsets index
+        newGrid = offset currentOffset currentGrid
+    in  _applyOffsetsRec (V.snoc gridList newGrid) offsets (index + 1)
+    
+applyOffsets :: Grid -> V.Vector Ipair -> V.Vector Grid
+applyOffsets grid offsets = V.tail $ _applyOffsetsRec (V.singleton grid) offsets 0
 
 validOffsetPos :: Grid -> Ipair -> Bool
 validOffsetPos g os =

@@ -57,18 +57,35 @@ instance Show TileType where
     show Border = "border"
     show Invisible = "invisible"
 
+data Solver = IDAStar | FringeSolve deriving (Eq)
+
+instance Show Solver where
+    show IDAStar = "IDA*"
+    show FringeSolve = "Fringe-Solve"
+    
 data Settings = Settings {
     settingsTileType :: TileType,
     settingsColorScheme :: ColorScheme, -- Pass through both the value and the position (just in case tho idk)
     settingsGridSize :: Ipair, -- Rows, columns
     settingsRowHover :: Int,
-    settingsRefreshRate :: Int 
+    settingsRefreshRate :: Int,
+    settingsSolver :: Solver
 } deriving (Generic)
 
+instance FromJSON Solver where
+    parseJSON (AT.String "ida-star") = pure IDAStar
+    parseJSON (AT.String "fringe-solve") = pure FringeSolve
+    parseJSON _ = fail "Invalid solver"
+
+instance ToJSON Solver where
+    toJSON IDAStar = AT.String "ida-star"
+    toJSON FringeSolve = AT.String "fringe-solve"
+    
 instance ToJSON TileType where
     toJSON Fill = AT.String "fill"
     toJSON Border = AT.String "border"
     toJSON Invisible = AT.String "invisible"
+    
 instance FromJSON TileType where
     parseJSON (AT.String "fill") = pure Fill
     parseJSON (AT.String "border") = pure Border
@@ -95,7 +112,8 @@ defaultSettings = Settings {
     settingsColorScheme = ColorScheme.fringe,
     settingsGridSize = (4, 4),
     settingsRowHover = 0,
-    settingsRefreshRate = 30
+    settingsRefreshRate = 30,
+    settingsSolver = FringeSolve
 }
 
 settingsPath :: IO FilePath

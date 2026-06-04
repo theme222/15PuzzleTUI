@@ -3,7 +3,7 @@ module Scene.SettingsScene where
 
 import UI (WN, bold, colorFG, colorBG, def, italic)
 import State (GameState (..), SettingsState (..))
-import Save (TileType (..), Settings (..))
+import Save (TileType (..), Settings (..), Solver (..))
 
 import Data.List.Index (imap)
 import Brick
@@ -14,7 +14,7 @@ import qualified Graphics.Vty as V
 import qualified Data.Ord as Ord
 
 -- Each row has a label, a getter and setter 
-data SettingValue = VInt Int | VHz Int | VColorScheme ColorScheme | VTileType TileType
+data SettingValue = VInt Int | VHz Int | VColorScheme ColorScheme | VTileType TileType | VSolver Solver
 type SettingRow = (String, SettingsState -> SettingValue, SettingsState -> SettingValue -> SettingsState)
 
 -- Takes the state and checks if the current row is the selected row, applying a highlight if so
@@ -35,6 +35,9 @@ settingsIncrement (VColorScheme (ColorScheme name _)) | name == "fringe" = VColo
 settingsIncrement (VTileType v) | v == Fill = VTileType Border
                                 | v == Border = VTileType Invisible
                                 | v == Invisible = VTileType Fill
+-- Solver enum
+settingsIncrement (VSolver v) | v == FringeSolve = VSolver IDAStar
+                              | v == IDAStar = VSolver FringeSolve
 settingsIncrement v = v
 
 settingsDecrement :: SettingValue -> SettingValue
@@ -50,6 +53,9 @@ settingsDecrement (VColorScheme (ColorScheme name _)) | name == "fringe" = VColo
 settingsDecrement (VTileType v) | v == Fill = VTileType  Invisible
                                 | v == Border = VTileType Fill
                                 | v == Invisible = VTileType Border
+-- Solver enum
+settingsDecrement (VSolver v)   | v == FringeSolve = VSolver IDAStar
+                                | v == IDAStar = VSolver FringeSolve
 settingsDecrement v = v
 
 settingRows :: [SettingRow]
@@ -73,6 +79,10 @@ settingRows = [ -- I just gotta say haskell gotta be the most unsightreadable la
         ("Refresh Rate", VHz . settingsRefreshRate, \s -> \case
             (VHz v) -> s { settingsRefreshRate = v }
             _ -> s
+        ), -- Hz
+        ("Solving Algorithm", VSolver . settingsSolver, \s -> \case
+            (VSolver v) -> s { settingsSolver = v }
+            _ -> s
         ) -- Enum
     ]
 
@@ -87,6 +97,7 @@ _drawSettingValue (VInt v) = _settingControlsPlusMinus (show v)
 _drawSettingValue (VHz v) = _settingControlsPlusMinus (show v)
 _drawSettingValue (VColorScheme cs) = _settingControlsLeftRight (show cs)
 _drawSettingValue (VTileType tt) = _settingControlsLeftRight (show tt)
+_drawSettingValue (VSolver s) = _settingControlsLeftRight (show s)
 
 _drawSettingRow :: SettingsState -> Int -> SettingRow -> Widget WN
 _drawSettingRow ss rowIndex (name, getter, _) =
@@ -100,6 +111,6 @@ _drawSettingRow ss rowIndex (name, getter, _) =
 draw :: GameState -> Widget WN
 draw gs =
     let ss = gameSettings gs
-    in center $ border $ padLeftRight 2 $ vLimit (2 + length settingRows) $ hLimit 25 $ vBox $
+    in center $ border $ padTopBottom 1 $ padLeftRight 2 $ vLimit (2 + length settingRows) $ hLimit 35 $ vBox $
         hCenter (colorFG V.brightBlue $ bold $ str "Settings") : str " "
         : imap (_drawSettingRow ss) settingRows

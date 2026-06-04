@@ -11,8 +11,8 @@ import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Brick (EventM, modify, get, put, halt, continueWithoutRedraw)
 import Control.Monad (when)
 import Scene.SettingsScene (settingsIncrement, settingsDecrement, settingRows)
-import Save (loadLeaderboard, Leaderboard (..), storeLeaderboard, formatLeaderboardRankings, Settings (..), storeSettings)
-import Solver (idaStar)
+import Save (loadLeaderboard, Leaderboard (..), storeLeaderboard, formatLeaderboardRankings, Settings (..), storeSettings, Solver (..))
+import Solver (idaStar, fringeSolve)
 import Text.Printf (printf)
 import Config (_REFRESH_HELPER_MS)
 import qualified Data.Vector as V
@@ -98,7 +98,8 @@ playSceneActionHandler a = do
         Action.Point -> checkBoardAndApplyMove gameState state $ actionPosition a
         Action.Menu  -> modify (\s -> s { gameScene = SettingsScene })
         Action.Help  -> do
-            let searchResult = idaStar oldGrid -- TODO: Consider putting this in a separate thread somehow
+            let searchResult | (settingsSolver . gameSettings) gameState == IDAStar = idaStar oldGrid
+                             | otherwise = fringeSolve oldGrid
 
             if playIsFinished state then
                 put gameState { gamePlay = state }
@@ -111,7 +112,7 @@ playSceneActionHandler a = do
                             helperGridVec = searchResult,
                             helperCurrentVecIdx = 0,
                             helperLastRenderTime = Nothing,
-                            helperIsHelping = True
+                            helperIsHelping = V.length searchResult > 1
                         }
                     }
                 }
