@@ -1,8 +1,9 @@
-{-# LANGUAGE LambdaCase #-} 
+{-# LANGUAGE LambdaCase #-}
 module Scene.SettingsScene where
 
-import UI (WN)
-import State (GameState (..), SettingsState (..), TileType (..))
+import UI (WN, bold, colorFG, colorBG, def, italic)
+import State (GameState (..), SettingsState (..))
+import Save (TileType (..), Settings (..), Solver (..))
 
 import Data.List.Index (imap)
 import Brick
@@ -10,9 +11,10 @@ import Brick.Widgets.Center (center, hCenter)
 import Brick.Widgets.Border
 import ColorScheme (ColorScheme (..), fringe, row, col)
 import qualified Graphics.Vty as V
+import qualified Data.Ord as Ord
 
--- Each row has a label, a getter and a function to update the state
-data SettingValue = VInt Int | VColorScheme ColorScheme | VTileType TileType
+-- Each row has a label, a getter and setter 
+data SettingValue = VInt Int | VHz Int | VColorScheme ColorScheme | VTileType TileType | VSolver Solver
 type SettingRow = (String, SettingsState -> SettingValue, SettingsState -> SettingValue -> SettingsState)
 
 -- Takes the state and checks if the current row is the selected row, applying a highlight if so
@@ -24,38 +26,41 @@ _applyHighlightIfOnRow state rowNum w = let selectedRow = settingsRowHover state
 
 settingsIncrement :: SettingValue -> SettingValue
 settingsIncrement (VInt v) = VInt (v + 1)
+settingsIncrement (VHz v) = VHz (Ord.clamp (15, 240) (v * 2))
 -- Color scheme enum
 settingsIncrement (VColorScheme (ColorScheme name _)) | name == "fringe" = VColorScheme row
                                             | name == "row" = VColorScheme col
                                             | name == "col" = VColorScheme fringe
 -- Tile type enum
 settingsIncrement (VTileType v) | v == Fill = VTileType Border
-                                | v == Border = VTileType Fill
+                                | v == Border = VTileType Invisible
+                                | v == Invisible = VTileType Fill
+-- Solver enum
+settingsIncrement (VSolver v) | v == FringeSolve = VSolver IDAStar
+                              | v == IDAStar = VSolver FringeSolve
 settingsIncrement v = v
-                                
+
 settingsDecrement :: SettingValue -> SettingValue
 -- Num can't be less than 2
 settingsDecrement (VInt 2) = VInt 2
 settingsDecrement (VInt v) = VInt (v - 1)
+settingsDecrement (VHz v) = VHz (Ord.clamp (15, 240) (v `div` 2))
 -- Color scheme enum
 settingsDecrement (VColorScheme (ColorScheme name _)) | name == "fringe" = VColorScheme col
+                                            | name == "col" = VColorScheme row
                                             | name == "row" = VColorScheme fringe
-                                            | name == "col" = VColorScheme fringe
 -- Tile type enum
-settingsDecrement (VTileType v) | v == Fill = VTileType Border
+settingsDecrement (VTileType v) | v == Fill = VTileType  Invisible
                                 | v == Border = VTileType Fill
+                                | v == Invisible = VTileType Border
+-- Solver enum
+settingsDecrement (VSolver v)   | v == FringeSolve = VSolver IDAStar
+                                | v == IDAStar = VSolver FringeSolve
 settingsDecrement v = v
-
-getSettingValueByIndex :: Int -> SettingsState -> SettingValue
-getSettingValueByIndex 0 ss = VInt (fst (settingsGridSize ss))
-getSettingValueByIndex 1 ss = VInt (snd (settingsGridSize ss))
-getSettingValueByIndex 2 ss = VColorScheme (settingsColorScheme ss)
-getSettingValueByIndex 3 ss = VTileType (settingsTileType ss)
-getSettingValueByIndex _ _ = error "Invalid setting index"
 
 settingRows :: [SettingRow]
 settingRows = [ -- I just gotta say haskell gotta be the most unsightreadable language I've ever used
-        ("Rows", VInt . fst . settingsGridSize, \s -> \case 
+        ("Rows", VInt . fst . settingsGridSize, \s -> \case
             (VInt v) -> s { settingsGridSize = (v, snd (settingsGridSize s)) }
             _ -> s
         ), -- Int
@@ -70,26 +75,42 @@ settingRows = [ -- I just gotta say haskell gotta be the most unsightreadable la
         ("Tile Type", VTileType . settingsTileType, \s -> \case
             (VTileType v) -> s { settingsTileType = v }
             _ -> s
+        ), -- Enum
+        ("Refresh Rate", VHz . settingsRefreshRate, \s -> \case
+            (VHz v) -> s { settingsRefreshRate = v }
+            _ -> s
+        ), -- Hz
+        ("Solving Algorithm", VSolver . settingsSolver, \s -> \case
+            (VSolver v) -> s { settingsSolver = v }
+            _ -> s
         ) -- Enum
     ]
-    
+
+_settingControlsPlusMinus :: String -> Widget WN
+_settingControlsPlusMinus s = colorFG V.red (str "- ") <+> italic (str s) <+> colorFG V.green (str " +")
+
+_settingControlsLeftRight :: String -> Widget WN
+_settingControlsLeftRight s = colorFG V.red (str "← ") <+> italic (str s) <+> colorFG V.green (str " →")
+
 _drawSettingValue :: SettingValue -> Widget WN
-_drawSettingValue (VInt v) = str $ "- " ++ show v ++ " +"
-_drawSettingValue (VColorScheme cs) = str $ "← " ++ show cs ++  " →" 
-_drawSettingValue (VTileType tt) = str $ "← " ++ show tt ++ " →" 
+_drawSettingValue (VInt v) = _settingControlsPlusMinus (show v)
+_drawSettingValue (VHz v) = _settingControlsPlusMinus (show v)
+_drawSettingValue (VColorScheme cs) = _settingControlsLeftRight (show cs)
+_drawSettingValue (VTileType tt) = _settingControlsLeftRight (show tt)
+_drawSettingValue (VSolver s) = _settingControlsLeftRight (show s)
 
 _drawSettingRow :: SettingsState -> Int -> SettingRow -> Widget WN
-_drawSettingRow ss rowIndex (name, getter, _) = 
+_drawSettingRow ss rowIndex (name, getter, _) =
     let value = getter ss
         isHovered = settingsRowHover ss == rowIndex
-        attr = if isHovered then bg V.brightBlue else V.defAttr
-    in modifyDefAttr (const attr) $ str name <+> fill ' ' <+> _drawSettingValue value 
+        attr = if isHovered then colorBG V.brightBlue else def
+    in attr $ bold (str name) <+> fill ' ' <+> _drawSettingValue value
 
 
 -- Changing anything in this will change the settings state but will not change the grid until we shuffle (reset)
 draw :: GameState -> Widget WN
-draw gs = 
+draw gs =
     let ss = gameSettings gs
-    in center $ border $ padLeftRight 2 $ vLimit (1 + length settingRows) $ hLimit 25 $ vBox $
-        hCenter (modifyDefAttr (const $ V.withStyle (fg V.brightBlue) V.bold) $ str "Settings")
+    in center $ border $ padTopBottom 1 $ padLeftRight 2 $ vLimit (2 + length settingRows) $ hLimit 35 $ vBox $
+        hCenter (colorFG V.brightBlue $ bold $ str "Settings") : str " "
         : imap (_drawSettingRow ss) settingRows

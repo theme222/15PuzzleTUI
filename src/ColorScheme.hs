@@ -5,6 +5,7 @@ import qualified Grid
 
 import qualified Graphics.Vty as V
 import Brick
+import UI
 
 data ColorScheme = ColorScheme {
     colorSchemeName :: String,
@@ -51,7 +52,7 @@ genRainbowColorMap n =
 
 _getFringeMapIndex :: Grid -> Int -> Int 
 _getFringeMapIndex g val = 
-    let (row, col) = Grid.getOriginalPos val g
+    let (row, col) = Grid.getOriginalPos g val
     in  if row <= col then row * 2 
         else col * 2 + 1
 
@@ -70,7 +71,7 @@ row = ColorScheme "row"
         \g value ->
         let (rows, _) = Grid.gridSize g
             colorMap = genRainbowColorMap rows
-            (valRow, _) = Grid.getOriginalPos value g
+            (valRow, _) = Grid.getOriginalPos g value
         in colorMap !! valRow
     )
     
@@ -80,14 +81,14 @@ col = ColorScheme "col"
         \g value ->
         let (_, cols) = Grid.gridSize g
             colorMap = genRainbowColorMap cols
-            (_, valCol) = Grid.getOriginalPos value g
+            (_, valCol) = Grid.getOriginalPos g value
         in colorMap !! valCol
     )
 
-applyCGAsFg :: ColorGetter -> Int -> V.Attr
-applyCGAsFg _ 0 = V.defAttr 
-applyCGAsFg cg val = V.withStyle (fg $ cg val) V.bold
+applyCGAsFg :: ColorGetter -> Int -> Widget WN -> Widget WN
+applyCGAsFg _ 0 = def
+applyCGAsFg cg val = colorFG (cg val)
 
-applyCGAsBg :: ColorGetter -> Int -> V.Attr
-applyCGAsBg _ 0 = V.defAttr 
-applyCGAsBg cg val = V.withStyle (bg $ cg val) V.bold
+applyCGAsBg :: ColorGetter -> Int -> Widget WN -> Widget WN
+applyCGAsBg _ 0 = def
+applyCGAsBg cg val = colorBG (cg val)

@@ -23,3 +23,5 @@ cabal.project.local~
 .ghc.environment.*
 
 15p
+
+*.log

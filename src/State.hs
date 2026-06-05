@@ -5,17 +5,19 @@ import Ipair (Ipair)
 import ColorScheme (ColorScheme)
 
 import Data.Time.Clock (UTCTime)
-import Save (Leaderboard)
+import Save (Leaderboard, Settings)
+import qualified Data.Vector as V
 
 data Scene = PlayScene | SettingsScene deriving (Show, Eq)
-data TileType = Fill | Border deriving (Show, Eq)
 data CustomEvent = Tick UTCTime
 
-data SettingsState = SettingsState {
-    settingsTileType :: TileType,
-    settingsColorScheme :: ColorScheme, -- Pass through both the value and the position (just in case tho idk)
-    settingsGridSize :: Ipair, -- Rows, columns
-    settingsRowHover :: Int
+type SettingsState = Settings
+
+data Helper = Helper {
+    helperGridVec :: V.Vector Grid,
+    helperCurrentVecIdx :: Int,
+    helperIsHelping :: Bool,
+    helperLastRenderTime :: Maybe UTCTime
 }
 
 data PlayState = PlayState {
@@ -24,12 +26,18 @@ data PlayState = PlayState {
     playIsFinished :: Bool,
     playTimerMs :: Int,
     playLastTickTime :: Maybe UTCTime,
-    playLeaderboard :: Leaderboard 
+    playLeaderboard :: Leaderboard,
+    playHelper :: Helper
+}
+
+data DebugState = DebugState {
+    debugStr :: String
 }
 
 -- Game State
 data GameState = GameState {
     gameScene :: Scene,
     gameSettings :: SettingsState,
-    gamePlay :: PlayState -- What a name btw
+    gamePlay :: PlayState,
+    gameDebug :: DebugState
 } 
