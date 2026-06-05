@@ -73,7 +73,7 @@ _slideTo grid locked from to =
                 yIsBlocked = any (\pos -> locked VU.! Grid.squashIndex grid pos) [from ~+ (y * normalize deltaY, 0) | y <- [1.. abs deltaY]]
                 nextAdjMovePos | deltaX == 0 = from ~+ (normalize deltaY, 0)
                                | deltaY == 0 = from ~+ (0, normalize deltaX)
-                               | xIsBlocked = from ~+ (normalize deltaY, 0) -- This might look stupid but it handles the all function that defaults to true on an empty list
+                               | xIsBlocked = from ~+ (normalize deltaY, 0) 
                                | otherwise  = from ~+ (0, normalize deltaX)
                 emptyTilePath = V.map fst $ _bfsEmptyPath (grid, Grid.nullGrid) locked' S.empty nextAdjMovePos
                 emptyTilePath' = V.snoc emptyTilePath $ Grid.move from $ if V.null emptyTilePath then grid else V.last emptyTilePath
@@ -173,6 +173,7 @@ _shrink2xN grid locked (from1, to1) (from2, to2) =
         tile1Path = _slideTo grid locked from1 to1
         tile1PathLastGrid = if V.null tile1Path then grid else V.last tile1Path
         tile2Locked = locked VU.// [(Grid.squashIndex grid to1, True), (Grid.squashIndex grid to2, True)]
+        ignoreTile2Path = Grid.getTile tile1PathLastGrid to2 == fromVal2
         from2' = Grid.getPos fromVal2 tile1PathLastGrid
         to2' = to2 ~+ (if xAxisSolve then downOS else rightOS)
         tile2Path = _slideTo tile1PathLastGrid tile2Locked from2' to2'
@@ -186,8 +187,9 @@ _shrink2xN grid locked (from1, to1) (from2, to2) =
         handle2xNPath = Grid.applyOffsets emptyTilePathLastGrid handle2xNOffsets
     -- in error $ show (emptyTilePath)
     in  if fromVal1 == toVal1 && fromVal2 == toVal2 then V.empty
+        else if ignoreTile2Path then tile1Path
         else if ignoreHandle2xN then V.snoc (tile1Path V.++ tile2Path) (Grid.move to2' tile2PathLastGrid)
-        else V.concat [tile1Path, tile2Path, handle2xNPath]
+        else V.concat [tile1Path, tile2Path, emptyTilePath, handle2xNPath]
 
 _handle2x2 :: Grid -> V.Vector Grid
 _handle2x2 grid =
@@ -254,19 +256,3 @@ _fringeSolve grid (rowBounds, colBounds) order
 
 fringeSolve :: Grid -> V.Vector Grid
 fringeSolve grid = V.concat [V.singleton grid, _fringeSolve grid (Grid.gridSize grid) Row]
-
-
--- _getFringeMapIndex :: Grid -> Int -> Int 
--- _getFringeMapIndex g val = 
---     let (row, col) = Grid.getOriginalPos g val
---     in  if row <= col then row * 2 
---         else col * 2 + 1
-
--- fringe :: ColorScheme
--- fringe = ColorScheme "fringe"
---     (
---         \g value ->
---         let (rows, cols) = Grid.gridSize g
---             colorMap = genRainbowColorMap (rows + cols - 2)
---         in colorMap !! _getFringeMapIndex g value
---     )

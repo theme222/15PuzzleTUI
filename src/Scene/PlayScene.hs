@@ -99,7 +99,7 @@ controlsUI =
         (str "Move right: " <+> _red (str "d, ➡")) <=>
         (str "Reset:      " <+> _red (str "r, <space>")) <=>
         (str "Settings:   " <+> _red (str "m")) <=>
-        (str "Help:       " <+> _red (str "h")) <=>
+        (str "Solve:      " <+> _red (str "h")) <=>
         (str "Quit:       " <+> _red (str "q"))
     )
 
